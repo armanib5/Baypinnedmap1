@@ -9,9 +9,10 @@
    confirmed single-business addresses — swap in real data before launch. */
 
 var CATS = {
-  market:    { l: "Markets",         c: "#3d6b42", icon: "leaf" },
-  foodhall:  { l: "Food & Drinks",   c: "#b8860b", icon: "fork" },
-  bars:      { l: "Bars & Restaurants", c: "#6b1e3c", icon: "cup" },
+  market:      { l: "Markets",         c: "#3d6b42", icon: "leaf" },
+  foodhall:    { l: "Food Hall / Market", c: "#b8860b", icon: "fork" },
+  restaurants: { l: "Restaurants",     c: "#e0662f", icon: "plate" },
+  bars:        { l: "Bars",            c: "#6b1e3c", icon: "cup" },
   artwalk:   { l: "Arts",            c: "#2c5f8a", icon: "palette" },
   cityart:   { l: "Community Art",   c: "#6a4e7a", icon: "art" },
   venue:     { l: "Theaters",        c: "#7a5230", icon: "mask" },
@@ -26,7 +27,7 @@ var CATS = {
 };
 
 /* Order controls the category filter row. */
-var CAT_ORDER = ["market","foodhall","bars","artwalk","cityart","venue","holiday","shop","parking","restrooms","transit","schools","hospitals","churches"];
+var CAT_ORDER = ["market","foodhall","restaurants","bars","artwalk","cityart","venue","holiday","shop","parking","restrooms","transit","schools","hospitals","churches"];
 
 var HOODS = [
   { id: "downtown",  l: "Downtown San Jose",       lat: 37.3382, lng: -121.8863, zoom: 15 },
@@ -46,7 +47,7 @@ var PLACES = [
     ds: "Over 20 local farms and vendors every Wednesday on Paseo de San Antonio.",
     pk: "ParkSJ garage 90 min free. Entrances on 2nd and 3rd Street.",
     tr: "VTA Light Rail Convention Center stop, 5 min walk.",
-    wb: "https://downtownsanjosefarmersmarket.com"
+    wb: "https://sjdowntown.com/downtown-farmers-market/"
   },
   {
     id: "sm", cat: "foodhall", hood: "downtown",
@@ -102,7 +103,7 @@ var PLACES = [
     id: "ct", cat: "venue", hood: "downtown",
     t: "California Theatre", w: "Box office hours vary",
     a: "345 S 1st St, San Jose, CA 95113",
-    lat: 37.3311, lng: -121.8878,
+    lat: 37.3307, lng: -121.8869,
     ds: "Restored 1927 Spanish Colonial Revival theater. Home to Opera San Jose and Symphony Silicon Valley.",
     pk: "Street parking on 1st and 2nd.",
     tr: "VTA Route 65/68 on 1st Street.",
@@ -112,7 +113,7 @@ var PLACES = [
     id: "cp", cat: "venue", hood: "downtown",
     t: "Center for the Performing Arts", w: "Box office hours vary",
     a: "255 Almaden Blvd, San Jose, CA 95113",
-    lat: 37.3300, lng: -121.8912,
+    lat: 37.3305, lng: -121.8918,
     ds: "Major performing arts center hosting Broadway shows, concerts, and dance.",
     pk: "Adjacent garages. Convention Center garage nearby.",
     tr: "VTA Convention Center light rail stop, 5 min walk.",
@@ -136,6 +137,17 @@ var PLACES = [
   { id: "tr1", cat: "transit", hood: "downtown", t: "Diridon Station", a: "65 Cahill St, San Jose, CA", lat: 37.3306, lng: -121.9023, ds: "Caltrain, ACE, Amtrak and future BART/HSR hub." },
   { id: "tr2", cat: "transit", hood: "downtown", t: "Convention Center VTA Stop", a: "1st St, San Jose, CA", lat: 37.3300, lng: -121.8891, ds: "VTA Light Rail stop near the Convention Center." },
   { id: "tr3", cat: "transit", hood: "downtown", t: "St James VTA Stop", a: "N 1st St, San Jose, CA", lat: 37.3418, lng: -121.8905, ds: "VTA Light Rail stop near St James Park." },
+
+  /* Paseo de San Antonio cluster, next to Hammer Theatre and the farmers
+     market - added as a test case to show several close-together real
+     businesses (verified addresses) rendering as distinct, organized pins. */
+  { id: "wh1", cat: "restaurants", hood: "downtown", t: "Whispers Cafe and Creperie", a: "150 S 2nd St, San Jose, CA 95113", lat: 37.3352, lng: -121.8862, ds: "Breakfast, brunch, and crepes right next to Hammer Theatre.", pk: "ParkSJ garages on 2nd and 3rd Street.", tr: "VTA light rail Convention Center stop, 5 min walk.", wb: "https://www.whisperscafe.com/" },
+  { id: "cb1", cat: "restaurants", hood: "downtown", t: "Campus Burgers", a: "108 Paseo de San Antonio, San Jose, CA 95113", lat: 37.3350, lng: -121.8859, ds: "Smashburgers popular with SJSU students, right on the Paseo.", pk: "ParkSJ garages on 2nd and 3rd Street.", tr: "VTA light rail Convention Center stop, 5 min walk.", wb: "https://campusburgers.com/" },
+  { id: "rp1", cat: "shop", hood: "downtown", t: "Rosies & Posies", a: "98 Paseo de San Antonio, San Jose, CA 95113", lat: 37.3348, lng: -121.8861, ds: "Downtown florist and flower delivery, steps from Hammer Theatre.", pk: "ParkSJ garages on 2nd and 3rd Street.", tr: "VTA light rail Convention Center stop, 5 min walk.", wb: "https://www.rosiesandposies.net/" },
+  { id: "sub1", cat: "restaurants", hood: "downtown", t: "Subway (SJSU Student Union)", a: "1 Washington Sq, San Jose, CA 95192", lat: 37.3354, lng: -121.8814, ds: "Sandwich shop inside the SJSU Student Union, a short walk from the Paseo.", pk: "ParkSJ garages on 3rd and 4th Street.", tr: "VTA light rail Convention Center stop, 8 min walk." },
+  { id: "tr4", cat: "transit", hood: "downtown", t: "Paseo de San Antonio Station", a: "1st/2nd St at Paseo de San Antonio, San Jose, CA", lat: 37.3346, lng: -121.8891, ds: "VTA Light Rail stop right at the Paseo de San Antonio crossing, closest stop to Hammer Theatre and the farmers market." },
+  { id: "pk5", cat: "parking", hood: "downtown", t: "4th Street Garage (SJSU)", a: "4th St, San Jose, CA 95112", lat: 37.3355, lng: -121.8825, ds: "Garage between the Paseo cluster and SJSU - approximate location, double-check before relying on it." },
+  { id: "rr6", cat: "restrooms", hood: "downtown", t: "Paseo de San Antonio Restrooms (customers only)", a: "Paseo de San Antonio, San Jose, CA 95113", lat: 37.3354, lng: -121.8867, ds: "No public restroom on this block - Whispers Cafe, Campus Burgers, and the SJSU Subway all reserve restrooms for paying customers. Buy something small if you need to use one." },
 
   /* Schools / Hospitals / Churches - often host city-sponsored events */
   { id: "sc1", cat: "schools", hood: "downtown", t: "San Jose State University", a: "1 Washington Sq, San Jose, CA 95192", lat: 37.3352, lng: -121.8811, ds: "Public university anchoring the east edge of downtown; frequent public events and lectures." },
