@@ -8,19 +8,7 @@ var ICONS = {
   school: "\u{1F3EB}", hospital: "\u{1F3E5}", church: "⛪", plate: "\u{1F37D}\u{FE0F}", hotel: "\u{1F3E8}"
 };
 
-/* Cities beyond San Jose, revealed via the "Other Cities" button next to
-   the map title. We don't have place data for these yet, so selecting one
-   just flies the map to its downtown/main area (mirrors Baypinned3's
-   existing top-level city switcher, which shows a "coming soon" state for
-   every city besides San Jose). */
-var CITIES = [
-  { id: "sc",   l: "Santa Clara",   lat: 37.3541, lng: -121.9552, zoom: 14 },
-  { id: "sv",   l: "Sunnyvale",     lat: 37.3688, lng: -122.0363, zoom: 14 },
-  { id: "mv",   l: "Mountain View", lat: 37.3894, lng: -122.0832, zoom: 14 },
-  { id: "camp", l: "Campbell",      lat: 37.2872, lng: -121.9500, zoom: 14 }
-];
-
-var map, clusterGroup, userMarker, activeHood = "downtown", activeCat = "all";
+var map, clusterGroup, userMarker, activeCity = "sj", activeHood = "downtown", activeCat = "all";
 var markerById = {};
 var zoneLayers = {};
 var userLoc = null;
@@ -262,48 +250,59 @@ function setAreaLabel(label, hasPlaces) {
   else { note.textContent = "Events coming soon for " + label + ". Be the first to post a flyer!"; note.style.display = "block"; }
 }
 
-function clearAreaSelections() {
+/* Every city carries its own list of hoods (CITIES, from places.js) -
+   picking a city swaps the whole neighborhood row below it rather than
+   revealing a second row alongside San Jose's. */
+function activeCityObj() { return CITIES.find(function (c) { return c.id === activeCity; }); }
+function findCityForHood(hoodId) {
+  for (var i = 0; i < CITIES.length; i++) {
+    var h = CITIES[i].hoods.find(function (x) { return x.id === hoodId; });
+    if (h) return { city: CITIES[i], hood: h };
+  }
+  return null;
+}
+function hoodHasPlaces(hoodId) { return PLACES.some(function (p) { return p.hood === hoodId; }); }
+
+function goToHood(h) {
   document.querySelectorAll(".hoodbtn").forEach(function (x) { x.classList.remove("on"); });
-  document.querySelectorAll(".citybtn").forEach(function (x) { x.classList.remove("on"); });
+  var btn = document.querySelector('.hoodbtn[data-hood-id="' + h.id + '"]');
+  if (btn) btn.classList.add("on");
+  activeHood = h.id;
+  setAreaLabel(h.l, hoodHasPlaces(h.id));
+  flyTo(h.lat, h.lng, h.zoom);
+  applyFilters();
+  hideFlyer();
 }
 
-function initHoodRow() {
+function renderHoodRow() {
   var row = document.getElementById("hoodRow");
-  HOODS.forEach(function (h) {
+  row.innerHTML = "";
+  activeCityObj().hoods.forEach(function (h) {
     var b = document.createElement("button");
     b.className = "hoodbtn" + (h.id === activeHood ? " on" : "");
+    b.dataset.hoodId = h.id;
     b.textContent = h.l;
-    b.onclick = function () {
-      clearAreaSelections();
-      b.classList.add("on");
-      activeHood = h.id;
-      setAreaLabel(h.l, true);
-      flyTo(h.lat, h.lng, h.zoom);
-      applyFilters();
-      hideFlyer();
-    };
+    b.onclick = function () { goToHood(h); };
     row.appendChild(b);
   });
+}
 
-  document.getElementById("otherCityBtn").onclick = function () {
-    document.getElementById("cityRow").classList.toggle("show");
-  };
-
-  var cityRow = document.getElementById("cityRow");
+function initCityRow() {
+  var row = document.getElementById("cityRow");
   CITIES.forEach(function (c) {
     var b = document.createElement("button");
-    b.className = "citybtn hoodbtn";
+    b.className = "citytab" + (c.id === activeCity ? " on" : "");
+    b.dataset.cityId = c.id;
     b.textContent = c.l;
     b.onclick = function () {
-      clearAreaSelections();
+      if (activeCity === c.id) return;
+      document.querySelectorAll(".citytab").forEach(function (x) { x.classList.remove("on"); });
       b.classList.add("on");
-      activeHood = c.id;
-      setAreaLabel(c.l, false);
-      flyTo(c.lat, c.lng, c.zoom);
-      applyFilters();
-      hideFlyer();
+      activeCity = c.id;
+      renderHoodRow();
+      goToHood(c.hoods[0]);
     };
-    cityRow.appendChild(b);
+    row.appendChild(b);
   });
 }
 
@@ -383,14 +382,16 @@ function initSearch() {
 }
 
 function selectPlace(p) {
-  var hood = HOODS.find(function (h) { return h.id === p.hood; });
-  if (hood && activeHood !== p.hood) {
-    clearAreaSelections();
-    var idx = HOODS.indexOf(hood);
-    document.querySelectorAll(".hoodbtn")[idx].classList.add("on");
-    activeHood = p.hood;
-    setAreaLabel(hood.l, true);
-    applyFilters();
+  if (activeHood !== p.hood) {
+    var found = findCityForHood(p.hood);
+    if (found) {
+      if (activeCity !== found.city.id) {
+        activeCity = found.city.id;
+        document.querySelectorAll(".citytab").forEach(function (x) { x.classList.toggle("on", x.dataset.cityId === activeCity); });
+        renderHoodRow();
+      }
+      goToHood(found.hood);
+    }
   }
   document.querySelectorAll(".filtbtn").forEach(function (x) { x.classList.remove("on"); });
   document.querySelector('.filtbtn[data-cat="all"]').classList.add("on");
@@ -445,7 +446,8 @@ function initMap() {
   buildZones();
   initLegend();
   applyFilters();
-  initHoodRow();
+  initCityRow();
+  renderHoodRow();
   initFilterRow();
   initSearch();
 

@@ -39,6 +39,38 @@ var HOODS = [
   { id: "east",      l: "East San Jose",             lat: 37.3444, lng: -121.8394, zoom: 14 }
 ];
 
+/* Every other Bay Area city gets its own small set of "mini city" areas,
+   same idea as San Jose's neighborhood row - these are approximate,
+   general-area coordinates (not geocode-verified like the downtown SJ
+   cluster), meant as reasonable starting points to refine later. */
+var HOODS_SC = [
+  { id: "sc-downtown", l: "Downtown Santa Clara", lat: 37.3541, lng: -121.9552, zoom: 15 },
+  { id: "sc-rivermark", l: "Rivermark",            lat: 37.3853, lng: -121.9645, zoom: 15 }
+];
+var HOODS_SV = [
+  { id: "sv-downtown", l: "Downtown Sunnyvale", lat: 37.3688, lng: -122.0363, zoom: 15 },
+  { id: "sv-moffett",  l: "Moffett Park",        lat: 37.4085, lng: -122.0525, zoom: 14 }
+];
+var HOODS_MV = [
+  { id: "mv-downtown",  l: "Downtown Mountain View", lat: 37.3894, lng: -122.0832, zoom: 15 },
+  { id: "mv-shoreline", l: "Shoreline",              lat: 37.4048, lng: -122.0784, zoom: 14 }
+];
+var HOODS_CAMP = [
+  { id: "camp-downtown",  l: "Downtown Campbell", lat: 37.2872, lng: -121.9500, zoom: 15 },
+  { id: "camp-pruneyard", l: "Pruneyard",          lat: 37.2932, lng: -121.9447, zoom: 15 }
+];
+
+/* Top-level city switcher - each city carries its own list of mini
+   cities/neighborhoods, so picking a different city swaps the whole
+   neighborhood row instead of just adding a second one alongside it. */
+var CITIES = [
+  { id: "sj",   l: "San Jose",       hoods: HOODS },
+  { id: "sc",   l: "Santa Clara",    hoods: HOODS_SC },
+  { id: "sv",   l: "Sunnyvale",      hoods: HOODS_SV },
+  { id: "mv",   l: "Mountain View",  hoods: HOODS_MV },
+  { id: "camp", l: "Campbell",       hoods: HOODS_CAMP }
+];
+
 var PLACES = [
   {
     id: "fm", cat: "market", hood: "downtown",

@@ -57,10 +57,15 @@ function populateSelects() {
     catSel.appendChild(opt);
   });
   var hoodSel = document.getElementById("fHood");
-  HOODS.forEach(function (h) {
-    var opt = document.createElement("option");
-    opt.value = h.id; opt.textContent = h.l;
-    hoodSel.appendChild(opt);
+  CITIES.forEach(function (c) {
+    var grp = document.createElement("optgroup");
+    grp.label = c.l;
+    c.hoods.forEach(function (h) {
+      var opt = document.createElement("option");
+      opt.value = h.id; opt.textContent = h.l;
+      grp.appendChild(opt);
+    });
+    hoodSel.appendChild(grp);
   });
 }
 
