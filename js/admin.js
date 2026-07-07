@@ -328,6 +328,217 @@ function resetDraft() {
   location.reload();
 }
 
+/* ---------------------------------------------------------------------
+   Events & Flyers - board-prep scaffolding, separate from map pins.
+   Same local-draft-then-export pattern as pins, but no map is involved:
+   this is a plain list + form. An event can optionally reference a pin
+   by id (linkedPin) instead of duplicating lat/lng. ------------------- */
+
+var EVENTS_DRAFT_KEY = "baypinned-admin-events-draft-v1";
+var workingEvents = loadEventsDraft();
+var selectedEventId = null;
+var eventsTouched = {};
+
+function loadEventsDraft() {
+  try {
+    var raw = localStorage.getItem(EVENTS_DRAFT_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return JSON.parse(JSON.stringify(EVENTS));
+}
+function saveEventsDraft() {
+  var el = document.getElementById("eventSaveStatus");
+  try {
+    localStorage.setItem(EVENTS_DRAFT_KEY, JSON.stringify(workingEvents));
+    if (el) { el.textContent = "Autosaved to this browser at " + new Date().toLocaleTimeString(); el.className = "savestatus ok"; }
+    return true;
+  } catch (e) {
+    if (el) { el.textContent = "Autosave is NOT working in this browser - export or download before you close this tab!"; el.className = "savestatus bad"; }
+    return false;
+  }
+}
+
+function populateEventSelects() {
+  var catSel = document.getElementById("eCat");
+  Object.keys(CATS).forEach(function (cat) {
+    var opt = document.createElement("option");
+    opt.value = cat; opt.textContent = CATS[cat].l;
+    catSel.appendChild(opt);
+  });
+  var pinSel = document.getElementById("eLinkedPin");
+  workingPlaces.forEach(function (p) {
+    var opt = document.createElement("option");
+    opt.value = p.id; opt.textContent = p.t;
+    pinSel.appendChild(opt);
+  });
+}
+
+function eventTouch(id, kind) { eventsTouched[id] = kind; renderEventsPendingList(); }
+function renderEventsPendingList() {
+  var el = document.getElementById("eventsPendingList");
+  var keys = Object.keys(eventsTouched);
+  if (!keys.length) { el.innerHTML = "No unsaved changes yet this session."; return; }
+  el.innerHTML = keys.map(function (id) {
+    var label = eventsTouched[id] === "deleted" ? id : ((workingEvents.find(function (e) { return e.id === id; }) || {}).t || id);
+    return "<span>" + eventsTouched[id] + ": " + label + "</span>";
+  }).join("");
+}
+
+function renderEventList() {
+  var el = document.getElementById("eventList");
+  if (!workingEvents.length) { el.innerHTML = '<div class="eventempty">No events yet - click "+ Add New Event" to create one.</div>'; return; }
+  el.innerHTML = "";
+  workingEvents.forEach(function (ev) {
+    var info = CATS[ev.cat] || { l: ev.cat, c: "#666" };
+    var card = document.createElement("div");
+    card.className = "eventcard";
+    card.innerHTML = '<span class="ecat" style="background:' + info.c + '">' + info.l + '</span>' +
+      '<span class="etitle">' + ev.t + '</span><span class="ewhen">' + (ev.w || "") + '</span>';
+    card.onclick = function () { selectEvent(ev.id); };
+    el.appendChild(card);
+  });
+}
+
+function clearEventForm() {
+  ["eTitle","eLbl","eWhen","eAddr","ePhone","eWeb","eEd","eDesc","eTags","ePk","eTr","eAc","eFam"].forEach(function (id) {
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("eRecur").value = "";
+  document.getElementById("eCat").value = "market";
+  document.getElementById("eLinkedPin").value = "";
+}
+
+function showEventForm() { document.getElementById("eventForm").style.display = "block"; }
+function hideEventForm() { document.getElementById("eventForm").style.display = "none"; }
+
+function selectEvent(id) {
+  selectedEventId = id;
+  var ev = workingEvents.find(function (x) { return x.id === id; });
+  if (!ev) return;
+  document.getElementById("eventFormTitle").textContent = "Editing: " + ev.t;
+  document.getElementById("eCat").value = ev.cat;
+  document.getElementById("eLinkedPin").value = ev.linkedPin || "";
+  document.getElementById("eTitle").value = ev.t || "";
+  document.getElementById("eLbl").value = ev.lbl || "";
+  document.getElementById("eWhen").value = ev.w || "";
+  document.getElementById("eRecur").value = ev.d || "";
+  document.getElementById("eAddr").value = ev.a || "";
+  document.getElementById("ePhone").value = ev.ph || "";
+  document.getElementById("eWeb").value = ev.wb || "";
+  document.getElementById("eEd").value = ev.ed || "";
+  document.getElementById("eDesc").value = ev.ds || "";
+  document.getElementById("eTags").value = (ev.tags || []).join(", ");
+  document.getElementById("ePk").value = ev.pk || "";
+  document.getElementById("eTr").value = ev.tr || "";
+  document.getElementById("eAc").value = ev.ac || "";
+  document.getElementById("eFam").value = ev.fam || "";
+  document.getElementById("btnDeleteEvent").disabled = false;
+  showEventForm();
+}
+
+function startNewEvent() {
+  selectedEventId = null;
+  clearEventForm();
+  document.getElementById("eventFormTitle").textContent = "New event (unsaved)";
+  document.getElementById("btnDeleteEvent").disabled = true;
+  showEventForm();
+}
+
+function readEventForm() {
+  var tagsRaw = document.getElementById("eTags").value.trim();
+  var obj = {
+    cat: document.getElementById("eCat").value,
+    linkedPin: document.getElementById("eLinkedPin").value || undefined,
+    t: document.getElementById("eTitle").value.trim(),
+    lbl: document.getElementById("eLbl").value.trim() || undefined,
+    w: document.getElementById("eWhen").value.trim(),
+    d: document.getElementById("eRecur").value || undefined,
+    a: document.getElementById("eAddr").value.trim() || undefined,
+    ph: document.getElementById("ePhone").value.trim() || undefined,
+    wb: document.getElementById("eWeb").value.trim() || undefined,
+    ed: document.getElementById("eEd").value || undefined,
+    ds: document.getElementById("eDesc").value.trim(),
+    tags: tagsRaw ? tagsRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : undefined,
+    pk: document.getElementById("ePk").value.trim() || undefined,
+    tr: document.getElementById("eTr").value.trim() || undefined,
+    ac: document.getElementById("eAc").value.trim() || undefined,
+    fam: document.getElementById("eFam").value.trim() || undefined
+  };
+  Object.keys(obj).forEach(function (k) { if (obj[k] === undefined) delete obj[k]; });
+  return obj;
+}
+
+function saveEvent() {
+  var data = readEventForm();
+  if (!data.t) { alert("Title is required."); return; }
+  if (selectedEventId) {
+    var ev = workingEvents.find(function (x) { return x.id === selectedEventId; });
+    if (!ev) return;
+    Object.keys(ev).forEach(function (k) { delete ev[k]; });
+    Object.assign(ev, { id: selectedEventId }, data);
+    eventTouch(selectedEventId, "edited");
+  } else {
+    var id = "ev" + Date.now();
+    workingEvents.push(Object.assign({ id: id }, data));
+    selectedEventId = id;
+    document.getElementById("btnDeleteEvent").disabled = false;
+    eventTouch(id, "added");
+  }
+  document.getElementById("eventFormTitle").textContent = "Editing: " + data.t;
+  renderEventList();
+  saveEventsDraft();
+}
+
+function deleteEvent() {
+  if (!selectedEventId) return;
+  if (!confirm("Delete this event?")) return;
+  var id = selectedEventId;
+  workingEvents = workingEvents.filter(function (e) { return e.id !== id; });
+  eventTouch(id, "deleted");
+  selectedEventId = null;
+  clearEventForm();
+  hideEventForm();
+  renderEventList();
+  saveEventsDraft();
+}
+
+function generateEventsFileContents() {
+  return "var EVENTS = " + JSON.stringify(workingEvents, null, 2) + ";\n";
+}
+function exportEvents() {
+  var box = document.getElementById("eventsExportOut");
+  box.value = generateEventsFileContents();
+  box.classList.add("show");
+  box.select();
+  try { document.execCommand("copy"); } catch (e) {}
+}
+function downloadEvents() {
+  var blob = new Blob([generateEventsFileContents()], { type: "text/javascript" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = "events.js";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function resetEventsDraft() {
+  if (!confirm("Discard your local events draft and reload the original data from data/events.js?")) return;
+  try { localStorage.removeItem(EVENTS_DRAFT_KEY); } catch (e) {}
+  location.reload();
+}
+
+function switchTab(tab) {
+  var pinsOn = tab === "pins";
+  document.getElementById("pinsSection").style.display = pinsOn ? "" : "none";
+  document.getElementById("panel").style.display = pinsOn ? "" : "none";
+  document.getElementById("eventsSection").style.display = pinsOn ? "none" : "";
+  document.getElementById("tabPins").classList.toggle("on", pinsOn);
+  document.getElementById("tabEvents").classList.toggle("on", !pinsOn);
+  /* Leaflet mis-measures its container while it was display:none, so the
+     map looks blank/offset the first time you switch back to this tab
+     without this. */
+  if (pinsOn && map) setTimeout(function () { map.invalidateSize(); }, 0);
+}
+
 var map;
 function initAdmin() {
   var start = HOODS[0];
@@ -360,6 +571,27 @@ function initAdmin() {
   document.getElementById("btnResetDraft").onclick = resetDraft;
   document.getElementById("btnDelete").disabled = true;
   saveDraft(); // populate the save-status line immediately so you know up front if autosave works here
+
+  populateEventSelects();
+  clearEventForm();
+  renderEventList();
+  renderEventsPendingList();
+  document.getElementById("btnAddEvent").onclick = startNewEvent;
+  document.getElementById("btnSaveEvent").onclick = saveEvent;
+  document.getElementById("btnDeleteEvent").onclick = deleteEvent;
+  document.getElementById("btnCancelEvent").onclick = function () {
+    selectedEventId = null;
+    clearEventForm();
+    hideEventForm();
+  };
+  document.getElementById("btnExportEvents").onclick = exportEvents;
+  document.getElementById("btnDownloadEvents").onclick = downloadEvents;
+  document.getElementById("btnResetEventsDraft").onclick = resetEventsDraft;
+  document.getElementById("btnDeleteEvent").disabled = true;
+  saveEventsDraft();
+
+  document.getElementById("tabPins").onclick = function () { switchTab("pins"); };
+  document.getElementById("tabEvents").onclick = function () { switchTab("events"); };
 }
 
 document.addEventListener("DOMContentLoaded", initAdmin);

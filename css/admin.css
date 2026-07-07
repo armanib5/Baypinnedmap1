@@ -38,8 +38,24 @@
 .abtn:disabled{opacity:.4;cursor:not-allowed;}
 
 .exportbox{margin-top:10px;border-top:1px dashed rgba(218,184,112,.3);padding-top:10px;}
-#exportOut{width:100%;min-height:160px;font-family:monospace;font-size:11.5px;background:#0d0a06;color:#9fe89f;border:1px solid rgba(218,184,112,.3);border-radius:4px;padding:10px;margin-top:8px;display:none;}
-#exportOut.show{display:block;}
+#exportOut, #eventsExportOut{width:100%;min-height:160px;font-family:monospace;font-size:11.5px;background:#0d0a06;color:#9fe89f;border:1px solid rgba(218,184,112,.3);border-radius:4px;padding:10px;margin-top:8px;display:none;}
+#exportOut.show, #eventsExportOut.show{display:block;}
 
 .pendinglist{font-size:12px;color:rgba(218,184,112,.7);margin-top:8px;}
 .pendinglist span{background:rgba(218,184,112,.15);border-radius:10px;padding:2px 8px;margin-right:6px;display:inline-block;margin-bottom:4px;}
+
+/* Tab switcher between Pins&Zones and Events&Flyers sections */
+.tabrow{display:flex;gap:8px;max-width:1100px;margin:14px auto 0;padding:0 14px;}
+.tabbtn{font-family:'Special Elite',monospace;font-size:12.5px;background:rgba(255,255,255,.05);color:rgba(218,184,112,.75);border:1px solid rgba(218,184,112,.25);padding:9px 16px;border-radius:8px 8px 0 0;cursor:pointer;}
+.tabbtn.on{background:#14100a;color:var(--cl);border-bottom-color:#14100a;}
+
+/* Events & Flyers list */
+.eventlist{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.eventcard{background:rgba(255,255,255,.05);border:1px solid rgba(218,184,112,.22);border-radius:6px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;}
+.eventcard:hover{border-color:rgba(218,184,112,.5);}
+.eventcard .ecat{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 7px;border-radius:3px;color:#fff;flex-shrink:0;}
+.eventcard .etitle{font-size:13px;color:#fff;flex:1;}
+.eventcard .ewhen{font-size:11px;color:rgba(218,184,112,.6);}
+.eventempty{font-size:12.5px;color:rgba(218,184,112,.5);font-style:italic;margin-bottom:16px;}
+.eventform{background:rgba(255,255,255,.03);border:1px solid rgba(218,184,112,.2);border-radius:8px;padding:14px 16px;margin-bottom:16px;}
+.eventform h3{font-family:'Special Elite',monospace;color:var(--cl);font-size:14px;margin-bottom:10px;}
