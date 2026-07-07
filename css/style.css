@@ -66,8 +66,8 @@ body{font-family:'Libre Franklin',sans-serif;color:var(--ink);background:#1a0800
 
 .mlg{position:absolute;bottom:12px;right:12px;background:rgba(253,246,220,.95);border:1px solid rgba(90,60,20,.28);border-radius:4px;padding:9px 11px;min-width:120px;z-index:500;}
 .mlg h4{font-family:'Special Elite',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#3a2010;margin-bottom:6px;}
-.li{display:flex;align-items:center;gap:5px;font-size:9px;color:#3a2010;margin-bottom:3px;}
-.ld{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.li{display:flex;align-items:center;gap:6px;font-size:9px;color:#3a2010;margin-bottom:4px;transition:opacity .2s;}
+.ld{width:15px;height:15px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;font-family:'Special Elite',monospace;}
 .mcomp{position:absolute;bottom:12px;left:12px;width:38px;height:38px;border:2px solid rgba(90,60,20,.45);border-radius:50%;background:rgba(253,246,220,.88);display:flex;align-items:center;justify-content:center;font-family:Georgia,serif;font-weight:700;font-size:14px;color:#3a2010;z-index:500;pointer-events:none;}
 
 .mapctl{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap;}
@@ -130,7 +130,7 @@ footer{text-align:center;color:rgba(200,160,70,.35);font-size:12px;padding:20px 
   .mlg{padding:6px 8px;min-width:88px;bottom:8px;right:8px;}
   .mlg h4{font-size:7.5px;margin-bottom:4px;}
   .li{font-size:7.5px;margin-bottom:2px;gap:4px;}
-  .ld{width:7px;height:7px;}
+  .ld{width:12px;height:12px;font-size:6.5px;}
   .mcomp{width:30px;height:30px;font-size:11px;bottom:8px;left:8px;}
   .mapstring{top:20px;left:6%;right:6%;}
   .mapflyerwrap{top:20px;max-width:94%;}

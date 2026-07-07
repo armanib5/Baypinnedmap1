@@ -147,6 +147,25 @@ function applyFilters() {
   }).map(function (p) { return markerById[p.id]; });
   clusterGroup.clearLayers();
   clusterGroup.addLayers(toShow);
+  updateLegendCounts();
+}
+
+/* Legend numbers always reflect the current neighborhood/city regardless
+   of the active category filter, so you can see at a glance how many of
+   each type are around before deciding what to filter to - 0 stays
+   visible rather than hiding the row, per request. */
+function updateLegendCounts() {
+  var counts = {};
+  PLACES.forEach(function (p) {
+    if (p.hood !== activeHood) return;
+    counts[p.cat] = (counts[p.cat] || 0) + 1;
+    if (isLive(p)) counts.live = (counts.live || 0) + 1;
+  });
+  document.querySelectorAll("#mapLegend .li[data-cat]").forEach(function (row) {
+    var n = counts[row.dataset.cat] || 0;
+    row.querySelector(".ld").textContent = n;
+    row.style.opacity = n ? "1" : ".45";
+  });
 }
 
 /* Cancels any in-flight flyTo before starting a new one. Firing a second
@@ -304,12 +323,14 @@ function initLegend() {
     var info = CATS[cat];
     var row = document.createElement("div");
     row.className = "li";
-    row.innerHTML = '<div class="ld" style="background:' + info.c + '"></div>' + info.l;
+    row.dataset.cat = cat;
+    row.innerHTML = '<div class="ld" style="background:' + info.c + '">0</div>' + info.l;
     lg.appendChild(row);
   });
   var liveRow = document.createElement("div");
   liveRow.className = "li";
-  liveRow.innerHTML = '<div class="ld" style="background:#10b981"></div>Live Now';
+  liveRow.dataset.cat = "live";
+  liveRow.innerHTML = '<div class="ld" style="background:#10b981">0</div>Live Now';
   lg.appendChild(liveRow);
 }
 
@@ -324,11 +345,11 @@ function initMap() {
   }).addTo(map);
 
   buildMarkers();
+  initLegend();
   applyFilters();
   initHoodRow();
   initFilterRow();
   initSearch();
-  initLegend();
 
   document.getElementById("zIn").onclick = function () { map.stop(); map.zoomIn(); };
   document.getElementById("zOut").onclick = function () { map.stop(); map.zoomOut(); };
