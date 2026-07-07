@@ -9,9 +9,8 @@ var workingPlaces = loadDraft();
 var markerById = {};
 var zoneLayerById = {};
 var selectedId = null; // null means "creating a new pin"
-var zoneMode = null;   // null | "corner1" | "corner2"
+var zoneMode = null;   // null | "adding" | "addingCorner" | "editing"
 var zoneTargetId = null;
-var zoneCorner1 = null;
 var touched = {}; // id -> "added" | "edited" | "deleted" (for the pending list)
 var tempMarker = null; // draggable placeholder shown while creating a new pin, before Save
 
@@ -69,7 +68,7 @@ function buildMarker(place) {
   var m = L.marker([place.lat, place.lng], { icon: catIcon(place.cat), draggable: true });
   m.bindTooltip(place.t);
   m.on("click", function () {
-    if (zoneMode && recordZoneCorner(m.getLatLng())) return;
+    if (zoneMode === "adding" || zoneMode === "addingCorner") { handleMapClick({ latlng: m.getLatLng() }); return; }
     selectPlace(place.id);
   });
   m.on("dragend", function () {
@@ -119,7 +118,7 @@ function clearForm() {
 
 function selectPlace(id) {
   selectedId = id;
-  zoneMode = null; zoneTargetId = null; zoneCorner1 = null;
+  exitZoneMode();
   clearTempMarker();
   document.getElementById("modeHint").textContent = "";
   var p = workingPlaces.find(function (x) { return x.id === id; });
@@ -155,7 +154,7 @@ function tempIcon() {
    precise right pixel among 40+ existing pins. */
 function startNewPin(latlng) {
   selectedId = null;
-  zoneMode = null; zoneTargetId = null; zoneCorner1 = null;
+  exitZoneMode();
   document.getElementById("modeHint").textContent = "Drag the gold dashed pin to the exact spot, then fill in the form and Save.";
   document.getElementById("panelTitle").textContent = "New pin (unsaved) - fill in the form and click Save Pin";
   clearForm();
@@ -202,7 +201,16 @@ function readForm() {
 
 function savePin() {
   var data = readForm();
-  if (!data.t || isNaN(data.lat) || isNaN(data.lng)) { alert("Name, latitude, and longitude are required."); return; }
+  if (!data.t) { alert("Name is required."); return; }
+  /* Location isn't required to save - if you haven't placed it yet, it
+     drops at the current map center and you can drag it into place (or
+     fill in the details first, save, then drag) whenever you're ready. */
+  if (isNaN(data.lat) || isNaN(data.lng)) {
+    var c = map.getCenter();
+    data.lat = round4(c.lat); data.lng = round4(c.lng);
+    document.getElementById("fLat").value = data.lat;
+    document.getElementById("fLng").value = data.lng;
+  }
   if (selectedId) {
     var p = workingPlaces.find(function (x) { return x.id === selectedId; });
     if (!p) return;
@@ -245,11 +253,111 @@ function deletePin() {
   saveDraft();
 }
 
+/* Zone tool: any shape, not just a rectangle. Two flows:
+   - No zone yet: click the map to add corners one at a time (3+ needed),
+     then Finish Zone. Any polygon - triangle, pentagon, whatever the
+     event footprint actually looks like.
+   - Zone already exists: drops a draggable gold handle on every corner
+     so you can drag any one of them to reshape it, plus "+ Add Corner"
+     to click one more point onto the shape. */
+var zoneDraftPoints = [];
+var zoneDraftLayer = null;
+var zoneHandles = [];
+
 function startZone() {
   if (!selectedId) { alert("Select (or save) a pin first, then draw its zone."); return; }
-  zoneMode = "corner1";
-  zoneTargetId = selectedId;
-  document.getElementById("modeHint").textContent = "Zone mode: click the map for corner 1 of 2.";
+  var p = workingPlaces.find(function (x) { return x.id === selectedId; });
+  if (!p) return;
+  if (p.zone && p.zone.length >= 3) enterZoneEditMode(p);
+  else enterZoneAddMode(p);
+}
+
+function enterZoneAddMode(p) {
+  zoneMode = "adding";
+  zoneTargetId = p.id;
+  zoneDraftPoints = [];
+  clearZoneHandles();
+  if (zoneDraftLayer) { map.removeLayer(zoneDraftLayer); zoneDraftLayer = null; }
+  document.getElementById("modeHint").textContent = "Zone mode: click the map to add corners (3+ needed) - any shape, not just a rectangle. Then click Finish Zone.";
+  document.getElementById("btnZoneFinish").style.display = "inline-block";
+  document.getElementById("btnZoneFinish").disabled = true;
+  document.getElementById("btnZoneAddCorner").style.display = "none";
+  document.getElementById("btnZoneDone").style.display = "none";
+}
+
+function addZoneDraftPoint(latlng) {
+  zoneDraftPoints.push([latlng.lat, latlng.lng]);
+  if (zoneDraftLayer) map.removeLayer(zoneDraftLayer);
+  zoneDraftLayer = L.polygon(zoneDraftPoints, { color: "#f59e0b", weight: 2, dashArray: "4 4", fillColor: "#f59e0b", fillOpacity: 0.15 });
+  zoneDraftLayer.addTo(map);
+  document.getElementById("btnZoneFinish").disabled = zoneDraftPoints.length < 3;
+}
+
+function finishZoneDraft() {
+  if (zoneDraftPoints.length < 3) return;
+  var p = workingPlaces.find(function (x) { return x.id === zoneTargetId; });
+  if (p) {
+    p.zone = zoneDraftPoints.slice();
+    refreshZoneLayer(p);
+    touch(p.id, "edited");
+    saveDraft();
+  }
+  if (zoneDraftLayer) { map.removeLayer(zoneDraftLayer); zoneDraftLayer = null; }
+  zoneDraftPoints = [];
+  if (p) enterZoneEditMode(p);
+}
+
+function enterZoneEditMode(p) {
+  zoneMode = "editing";
+  zoneTargetId = p.id;
+  document.getElementById("modeHint").textContent = "Zone mode: drag any gold corner to reshape it. \"+ Add Corner\" then click the map to add another point. Click Done when finished.";
+  document.getElementById("btnZoneFinish").style.display = "none";
+  document.getElementById("btnZoneAddCorner").style.display = "inline-block";
+  document.getElementById("btnZoneDone").style.display = "inline-block";
+  buildZoneHandles(p);
+}
+
+function buildZoneHandles(p) {
+  clearZoneHandles();
+  p.zone.forEach(function (pt, idx) {
+    var h = L.marker(pt, {
+      draggable: true,
+      icon: L.divIcon({
+        html: '<div style="width:16px;height:16px;border-radius:50%;background:#f59e0b;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.6);"></div>',
+        className: "", iconSize: [16, 16], iconAnchor: [8, 8]
+      })
+    });
+    h.on("drag", function () {
+      var ll = h.getLatLng();
+      p.zone[idx] = [ll.lat, ll.lng];
+      refreshZoneLayer(p);
+    });
+    h.on("dragend", function () { touch(p.id, "edited"); saveDraft(); });
+    h.addTo(map);
+    zoneHandles.push(h);
+  });
+}
+
+function clearZoneHandles() {
+  zoneHandles.forEach(function (h) { map.removeLayer(h); });
+  zoneHandles = [];
+}
+
+function addZoneCorner() {
+  if (zoneMode !== "editing") return;
+  zoneMode = "addingCorner";
+  document.getElementById("modeHint").textContent = "Click the map to append a new corner to this zone.";
+}
+
+function exitZoneMode() {
+  zoneMode = null; zoneTargetId = null;
+  if (zoneDraftLayer) { map.removeLayer(zoneDraftLayer); zoneDraftLayer = null; }
+  zoneDraftPoints = [];
+  clearZoneHandles();
+  document.getElementById("btnZoneFinish").style.display = "none";
+  document.getElementById("btnZoneAddCorner").style.display = "none";
+  document.getElementById("btnZoneDone").style.display = "none";
+  document.getElementById("modeHint").textContent = "";
 }
 
 function clearZone() {
@@ -258,41 +366,24 @@ function clearZone() {
   if (!p) return;
   delete p.zone;
   if (zoneLayerById[selectedId]) { map.removeLayer(zoneLayerById[selectedId]); delete zoneLayerById[selectedId]; }
+  if (zoneTargetId === selectedId) exitZoneMode();
   touch(selectedId, "edited");
   saveDraft();
 }
 
-/* Shared by both the map's own click handler and each marker's click
-   handler - while a zone is being drawn, clicking an existing pin near/at
-   a corner should still count as placing that corner instead of
-   selecting the pin (selectPlace() would otherwise cancel zone mode). */
-function recordZoneCorner(latlng) {
-  if (zoneMode === "corner1") {
-    zoneCorner1 = latlng;
-    zoneMode = "corner2";
-    document.getElementById("modeHint").textContent = "Zone mode: click the map for corner 2 of 2.";
-    return true;
-  }
-  if (zoneMode === "corner2") {
-    var c1 = zoneCorner1, c2 = latlng;
-    var n = Math.max(c1.lat, c2.lat), s = Math.min(c1.lat, c2.lat);
-    var w = Math.min(c1.lng, c2.lng), ee = Math.max(c1.lng, c2.lng);
+function handleMapClick(e) {
+  if (zoneMode === "adding") { addZoneDraftPoint(e.latlng); return; }
+  if (zoneMode === "addingCorner") {
     var p = workingPlaces.find(function (x) { return x.id === zoneTargetId; });
     if (p) {
-      p.zone = [[s, w], [s, ee], [n, ee], [n, w]];
+      p.zone.push([e.latlng.lat, e.latlng.lng]);
       refreshZoneLayer(p);
       touch(p.id, "edited");
       saveDraft();
+      enterZoneEditMode(p);
     }
-    zoneMode = null; zoneTargetId = null; zoneCorner1 = null;
-    document.getElementById("modeHint").textContent = "";
-    return true;
+    return;
   }
-  return false;
-}
-
-function handleMapClick(e) {
-  if (recordZoneCorner(e.latlng)) return;
   startNewPin(e.latlng);
 }
 
@@ -305,12 +396,31 @@ function generateFileContents() {
   return out;
 }
 
+/* Tries the modern clipboard API first (more reliable than execCommand,
+   which is deprecated and blocked outright in some mobile browsers),
+   falls back to the old select+execCommand trick, and either way shows a
+   clear on-screen result instead of leaving you guessing whether it
+   worked. The textarea below stays visible either way so you can select
+   and copy by hand as a last resort. */
+function copyToClipboardThen(text, confirmElId) {
+  var el = document.getElementById(confirmElId);
+  function ok() { if (el) { el.textContent = "Copied! Paste it into your next message to Claude."; el.className = "exportconfirm ok"; } }
+  function fail() { if (el) { el.textContent = "Couldn't auto-copy - select the text in the box below and copy it manually, then paste it into your message to Claude."; el.className = "exportconfirm bad"; } }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(ok, function () {
+      try { document.execCommand("copy"); ok(); } catch (e) { fail(); }
+    });
+  } else {
+    try { document.execCommand("copy"); ok(); } catch (e) { fail(); }
+  }
+}
+
 function exportData() {
   var box = document.getElementById("exportOut");
   box.value = generateFileContents();
   box.classList.add("show");
   box.select();
-  try { document.execCommand("copy"); } catch (e) {}
+  copyToClipboardThen(box.value, "exportConfirm");
 }
 
 function downloadData() {
@@ -320,6 +430,8 @@ function downloadData() {
   a.href = url; a.download = "places.js";
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  var el = document.getElementById("exportConfirm");
+  if (el) { el.textContent = "Downloaded places.js - send that file to Claude."; el.className = "exportconfirm ok"; }
 }
 
 function resetDraft() {
@@ -510,7 +622,7 @@ function exportEvents() {
   box.value = generateEventsFileContents();
   box.classList.add("show");
   box.select();
-  try { document.execCommand("copy"); } catch (e) {}
+  copyToClipboardThen(box.value, "eventsExportConfirm");
 }
 function downloadEvents() {
   var blob = new Blob([generateEventsFileContents()], { type: "text/javascript" });
@@ -519,6 +631,8 @@ function downloadEvents() {
   a.href = url; a.download = "events.js";
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  var el = document.getElementById("eventsExportConfirm");
+  if (el) { el.textContent = "Downloaded events.js - send that file to Claude."; el.className = "exportconfirm ok"; }
 }
 function resetEventsDraft() {
   if (!confirm("Discard your local events draft and reload the original data from data/events.js?")) return;
@@ -556,9 +670,13 @@ function initAdmin() {
   document.getElementById("btnSave").onclick = savePin;
   document.getElementById("btnDelete").onclick = deletePin;
   document.getElementById("btnZoneStart").onclick = startZone;
+  document.getElementById("btnZoneFinish").onclick = finishZoneDraft;
+  document.getElementById("btnZoneAddCorner").onclick = addZoneCorner;
+  document.getElementById("btnZoneDone").onclick = exitZoneMode;
   document.getElementById("btnZoneClear").onclick = clearZone;
   document.getElementById("btnCancel").onclick = function () {
-    selectedId = null; zoneMode = null; zoneTargetId = null; zoneCorner1 = null;
+    selectedId = null;
+    exitZoneMode();
     clearTempMarker();
     document.getElementById("panelTitle").textContent = "No pin selected";
     document.getElementById("modeHint").textContent = "";
