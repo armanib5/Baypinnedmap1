@@ -41,17 +41,22 @@ var HOODS = [
 var PLACES = [
   {
     id: "fm", cat: "market", hood: "downtown",
-    t: "Downtown SJ Farmers Market", w: "Wednesdays 9:00am - 1:30pm", d: "wed",
-    a: "Paseo de San Antonio (near 2nd St), San Jose, CA 95113",
+    t: "Downtown SJ Farmers Market", w: "Wednesdays 9:00am - 1:30pm", d: "wed", sh: 9, eh: 13.5,
+    a: "Paseo de San Antonio (near 3rd St), San Jose, CA 95113",
     lat: 37.3356, lng: -121.8843,
     ds: "Over 20 local farms and vendors every Wednesday on Paseo de San Antonio.",
     pk: "ParkSJ garage 90 min free. Entrances on 2nd and 3rd Street.",
     tr: "VTA Light Rail Convention Center stop, 5 min walk.",
-    wb: "https://sjdowntown.com/downtown-farmers-market/"
+    wb: "https://sjdowntown.com/downtown-farmers-market/",
+    /* Red "active zone" outline on the paseo footprint the market actually
+       covers - only drawn while the market is live (see isLive in map.js).
+       Rough estimate - adjust corners in the admin page once you've
+       walked the real closure. */
+    zone: [[37.3352,-121.8850],[37.3352,-121.8836],[37.3360,-121.8836],[37.3360,-121.8850]]
   },
   {
     id: "sm", cat: "foodhall", hood: "downtown",
-    t: "SoFA Market", w: "Open Daily 11am - 9pm", d: "daily",
+    t: "SoFA Market", w: "Open Daily 11am - 9pm", d: "daily", sh: 11, eh: 21,
     a: "387 S 1st St, San Jose, CA 95113",
     lat: 37.3302, lng: -121.8864,
     ds: "A permanent downtown food hall with multiple restaurants and a craft cocktail bar.",
@@ -71,13 +76,17 @@ var PLACES = [
   },
   {
     id: "aw", cat: "artwalk", hood: "downtown",
-    t: "South First Fridays ArtWalk", w: "First Friday Monthly, 5pm - 9pm", d: "monthly",
+    t: "South First Fridays ArtWalk", w: "First Friday Monthly, 5pm - 9pm", d: "monthly", sh: 17, eh: 21,
     a: "South 1st Street, SoFA District, San Jose, CA",
     lat: 37.3305, lng: -121.8867,
     ds: "Free self-guided evening art walk through downtown galleries, museums, and pop-up installations.",
     pk: "Street parking on S 1st/2nd/3rd. Free after 6pm in many garages.",
     tr: "VTA Route 65/68. Walk south from Convention Center light rail.",
-    wb: "https://southfirstfridays.com"
+    wb: "https://southfirstfridays.com",
+    /* Rough closure footprint along S 1st St through the SoFA District -
+       only drawn while the walk is live. Adjust once you know the real
+       closed-street boundary. */
+    zone: [[37.3280,-121.8880],[37.3280,-121.8862],[37.3320,-121.8862],[37.3320,-121.8880]]
   },
   {
     id: "gs", cat: "cityart", hood: "downtown",
@@ -143,11 +152,12 @@ var PLACES = [
      businesses (verified addresses) rendering as distinct, organized pins. */
   { id: "wh1", cat: "restaurants", hood: "downtown", t: "Whispers Cafe and Creperie", a: "150 S 2nd St, San Jose, CA 95113", lat: 37.3352, lng: -121.8862, ds: "Breakfast, brunch, and crepes right next to Hammer Theatre.", pk: "ParkSJ garages on 2nd and 3rd Street.", tr: "VTA light rail Convention Center stop, 5 min walk.", wb: "https://www.whisperscafe.com/" },
   { id: "cb1", cat: "restaurants", hood: "downtown", t: "Campus Burgers", a: "108 Paseo de San Antonio, San Jose, CA 95113", lat: 37.3350, lng: -121.8859, ds: "Smashburgers popular with SJSU students, right on the Paseo.", pk: "ParkSJ garages on 2nd and 3rd Street.", tr: "VTA light rail Convention Center stop, 5 min walk.", wb: "https://campusburgers.com/" },
-  { id: "rp1", cat: "shop", hood: "downtown", t: "Rosies & Posies", a: "98 Paseo de San Antonio, San Jose, CA 95113", lat: 37.3348, lng: -121.8861, ds: "Downtown florist and flower delivery, steps from Hammer Theatre.", pk: "ParkSJ garages on 2nd and 3rd Street.", tr: "VTA light rail Convention Center stop, 5 min walk.", wb: "https://www.rosiesandposies.net/" },
-  { id: "sub1", cat: "restaurants", hood: "downtown", t: "Subway (SJSU Student Union)", a: "1 Washington Sq, San Jose, CA 95192", lat: 37.3354, lng: -121.8814, ds: "Sandwich shop inside the SJSU Student Union, a short walk from the Paseo.", pk: "ParkSJ garages on 3rd and 4th Street.", tr: "VTA light rail Convention Center stop, 8 min walk." },
-  { id: "tr4", cat: "transit", hood: "downtown", t: "Paseo de San Antonio Station", a: "1st/2nd St at Paseo de San Antonio, San Jose, CA", lat: 37.3346, lng: -121.8891, ds: "VTA Light Rail stop right at the Paseo de San Antonio crossing, closest stop to Hammer Theatre and the farmers market." },
-  { id: "pk5", cat: "parking", hood: "downtown", t: "4th Street Garage (SJSU)", a: "4th St, San Jose, CA 95112", lat: 37.3355, lng: -121.8825, ds: "Garage between the Paseo cluster and SJSU - approximate location, double-check before relying on it." },
-  { id: "rr6", cat: "restrooms", hood: "downtown", t: "Paseo de San Antonio Restrooms (customers only)", a: "Paseo de San Antonio, San Jose, CA 95113", lat: 37.3354, lng: -121.8867, ds: "No public restroom on this block - Whispers Cafe, Campus Burgers, and the SJSU Subway all reserve restrooms for paying customers. Buy something small if you need to use one." },
+  { id: "rp1", cat: "shop", hood: "downtown", t: "Rosies & Posies", a: "98 Paseo de San Antonio, San Jose, CA 95113", lat: 37.3347, lng: -121.8862, ds: "Downtown florist and flower delivery, right between Hammer Theatre and Campus Burgers. Not listed on Google Maps yet - position matched to a photo you provided.", pk: "ParkSJ garages on 2nd and 3rd Street.", tr: "VTA light rail Convention Center stop, 5 min walk.", wb: "https://www.rosiesandposies.net/" },
+  { id: "sub1", cat: "restaurants", hood: "downtown", t: "Subway", a: "S 2nd St, San Jose, CA 95113", lat: 37.3356, lng: -121.8869, ds: "Sandwich shop on S 2nd St, just west of the Hammer Theatre plaza.", pk: "ParkSJ garages on 2nd and 3rd Street.", tr: "VTA light rail Convention Center stop, 5 min walk." },
+  { id: "tr4", cat: "transit", hood: "downtown", t: "San Antonio Station", a: "S 2nd St at Paseo de San Antonio, San Jose, CA", lat: 37.3352, lng: -121.8875, ds: "VTA Light Rail stop on 2nd Street, also referred to as Paseo de San Antonio station - closest stop to Hammer Theatre and the farmers market." },
+  { id: "pk5", cat: "parking", hood: "downtown", t: "MCM San Jose Parking", a: "S 2nd St, San Jose, CA 95113", lat: 37.3363, lng: -121.8866, ds: "Parking lot on 2nd St near Central Pl, north of the Hammer Theatre plaza." },
+  { id: "pk6", cat: "parking", hood: "downtown", t: "Impark", a: "S 2nd St, San Jose, CA 95113", lat: 37.3359, lng: -121.8863, ds: "Parking lot between 2nd St and the Hammer Theatre plaza." },
+  { id: "rr6", cat: "restrooms", hood: "downtown", t: "Paseo de San Antonio Restrooms (customers only)", a: "Paseo de San Antonio, San Jose, CA 95113", lat: 37.3354, lng: -121.8858, ds: "No public restroom on this block - Whispers Cafe, Campus Burgers, and the nearby Subway all reserve restrooms for paying customers. Buy something small if you need to use one." },
 
   /* Schools / Hospitals / Churches - often host city-sponsored events */
   { id: "sc1", cat: "schools", hood: "downtown", t: "San Jose State University", a: "1 Washington Sq, San Jose, CA 95192", lat: 37.3352, lng: -121.8811, ds: "Public university anchoring the east edge of downtown; frequent public events and lectures." },

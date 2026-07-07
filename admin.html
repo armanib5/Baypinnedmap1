@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BayPinned SJ &mdash; Admin: Pin &amp; Zone Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Libre+Franklin:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="bg"></div>
+<div class="page">
+  <div class="admintop">
+    <div class="logo">&#128204; BayPinned SJ</div>
+    <div class="warn">Admin tool &mdash; not part of the public map, not linked from it. Edits here only change what you export/download.</div>
+    <a href="index.html">&larr; Back to map</a>
+  </div>
+
+  <div class="adminwrap">
+    <div class="adminhint">
+      <b>Click empty map</b> to drop a new pin here &middot; <b>drag any pin</b> to reposition it &middot; <b>click an existing pin</b> to edit it &middot;
+      use <b>Draw Zone</b> below to mark an event's street-closure footprint. Nothing here saves to the live site automatically &mdash;
+      when you're done, use <b>Export</b> at the bottom to copy the updated data and paste it into <code>data/places.js</code> yourself.
+    </div>
+    <div class="mframe">
+      <div id="adminMap"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="panel-inner">
+      <h3 id="panelTitle">No pin selected</h3>
+      <div class="modehint" id="modeHint"></div>
+
+      <div class="formgrid" id="formFields">
+        <label>Category
+          <select id="fCat"></select>
+        </label>
+        <label>Neighborhood
+          <select id="fHood"></select>
+        </label>
+        <label>Name
+          <input id="fName" type="text" placeholder="Business or event name">
+        </label>
+        <label>Address
+          <input id="fAddr" type="text" placeholder="Full street address">
+        </label>
+        <label>Latitude
+          <input id="fLat" type="number" step="0.0001">
+        </label>
+        <label>Longitude
+          <input id="fLng" type="number" step="0.0001">
+        </label>
+        <label>When (shown on flyer)
+          <input id="fWhen" type="text" placeholder="e.g. Wednesdays 9am-1:30pm">
+        </label>
+        <label>Recurrence code (optional)
+          <select id="fRecur">
+            <option value="">None (standing location)</option>
+            <option value="daily">Every day</option>
+            <option value="today">Ongoing (date-range event)</option>
+            <option value="monthly">First Friday monthly</option>
+            <option value="sun">Sundays</option>
+            <option value="mon">Mondays</option>
+            <option value="tue">Tuesdays</option>
+            <option value="wed">Wednesdays</option>
+            <option value="thu">Thursdays</option>
+            <option value="fri">Fridays</option>
+            <option value="sat">Saturdays</option>
+          </select>
+        </label>
+        <label>Start hour (24hr, optional)
+          <input id="fSh" type="number" step="0.5" placeholder="e.g. 9">
+        </label>
+        <label>End hour (24hr, optional)
+          <input id="fEh" type="number" step="0.5" placeholder="e.g. 13.5">
+        </label>
+        <label>End date (optional, auto-expires)
+          <input id="fEd" type="date">
+        </label>
+        <label>Website (optional)
+          <input id="fWeb" type="text" placeholder="https://">
+        </label>
+        <label class="full">Description
+          <textarea id="fDesc" placeholder="Short description shown on the flyer"></textarea>
+        </label>
+        <label class="full">Parking note (optional)
+          <input id="fPk" type="text">
+        </label>
+        <label class="full">Transit note (optional)
+          <input id="fTr" type="text">
+        </label>
+      </div>
+
+      <div class="btnrow">
+        <button class="abtn green" id="btnSave">Save Pin</button>
+        <button class="abtn red" id="btnDelete">Delete Pin</button>
+        <button class="abtn gold" id="btnZoneStart">Draw Zone (2 corners)</button>
+        <button class="abtn gray" id="btnZoneClear">Clear Zone</button>
+        <button class="abtn outline" id="btnCancel">Cancel / Deselect</button>
+      </div>
+
+      <div class="exportbox">
+        <div class="btnrow" style="margin-top:0;">
+          <button class="abtn gold" id="btnExport">Export Updated places.js</button>
+          <button class="abtn outline" id="btnDownload">Download places.js</button>
+          <button class="abtn outline" id="btnResetDraft">Discard My Local Draft</button>
+        </div>
+        <div class="pendinglist" id="pendingList"></div>
+        <textarea id="exportOut" readonly></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="data/places.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

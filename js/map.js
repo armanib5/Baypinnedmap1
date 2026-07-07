@@ -22,6 +22,7 @@ var CITIES = [
 
 var map, clusterGroup, userMarker, activeHood = "downtown", activeCat = "all";
 var markerById = {};
+var zoneLayers = {};
 var userLoc = null;
 
 /* A place is "live" only while its schedule says it's actually happening
@@ -43,9 +44,19 @@ function isTodayPlace(p) {
   if (p.d.length === 10) return p.d === d.toISOString().slice(0, 10);
   return false;
 }
+/* If a place gives an sh/eh (start hour/end hour, 24hr decimal) window -
+   e.g. the farmers market's 9:00am-1:30pm is sh:9, eh:13.5 - it's only
+   live during those hours on the right day, not all day just because the
+   day matches. Places without sh/eh (the World Cup's "all matches" span,
+   for instance) stay live for the whole day. */
 function isLive(p) {
   if (p.ed && p.ed < new Date().toISOString().slice(0, 10)) return false;
-  return isTodayPlace(p);
+  if (!isTodayPlace(p)) return false;
+  if (p.sh != null && p.eh != null) {
+    var now = new Date(), h = now.getHours() + now.getMinutes() / 60;
+    if (h < p.sh || h > p.eh) return false;
+  }
+  return true;
 }
 
 function pinDivIcon(p) {
@@ -136,6 +147,35 @@ function buildMarkers() {
   map.addLayer(clusterGroup);
 }
 
+/* Builds a red "active zone" outline for any place that defines one (a
+   street closure footprint, e.g. an ArtWalk or a farmers market) - kept
+   off the map until updateZones() decides it should be showing. */
+function buildZones() {
+  PLACES.forEach(function (p) {
+    if (!p.zone) return;
+    var poly = L.polygon(p.zone, {
+      color: "#dc2626", weight: 2, dashArray: "6 4",
+      fillColor: "#dc2626", fillOpacity: 0.22
+    });
+    poly.bindTooltip(p.t + " - active now", { sticky: true });
+    zoneLayers[p.id] = { poly: poly, place: p };
+  });
+}
+
+/* A zone only shows while its place is both in the current
+   neighborhood/city AND actually live right now (isLive) - so the
+   Farmers Market's footprint appears Wednesday mornings and disappears
+   the rest of the week, same idea as the pulsing "live" pins. */
+function updateZones() {
+  Object.keys(zoneLayers).forEach(function (id) {
+    var z = zoneLayers[id];
+    var shouldShow = z.place.hood === activeHood && isLive(z.place);
+    var onMap = map.hasLayer(z.poly);
+    if (shouldShow && !onMap) z.poly.addTo(map);
+    if (!shouldShow && onMap) map.removeLayer(z.poly);
+  });
+}
+
 /* Rebuilds the visible marker set using MarkerClusterGroup's bulk
    clearLayers()/addLayers() API. Earlier this looped eachLayer+removeLayer,
    which Leaflet explicitly documents as unsafe to do mid-iteration — that
@@ -148,6 +188,7 @@ function applyFilters() {
   clusterGroup.clearLayers();
   clusterGroup.addLayers(toShow);
   updateLegendCounts();
+  updateZones();
 }
 
 /* Legend numbers always reflect the current neighborhood/city regardless
@@ -366,6 +407,7 @@ function initMap() {
   }).addTo(map);
 
   buildMarkers();
+  buildZones();
   initLegend();
   applyFilters();
   initHoodRow();
