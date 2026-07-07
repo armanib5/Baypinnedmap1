@@ -7,8 +7,21 @@ var ICONS = {
   P: "P", restroom: "\u{1F6BB}", train: "\u{1F686}"
 };
 
+/* Cities beyond San Jose, revealed via the ">>" arrow at the end of the
+   neighborhood row. We don't have place data for these yet, so selecting
+   one just flies the map to its downtown/main area (mirrors Baypinned3's
+   existing top-level city switcher, which shows a "coming soon" state for
+   every city besides San Jose). */
+var CITIES = [
+  { id: "sc",   l: "Santa Clara",   lat: 37.3541, lng: -121.9552, zoom: 14 },
+  { id: "sv",   l: "Sunnyvale",     lat: 37.3688, lng: -122.0363, zoom: 14 },
+  { id: "mv",   l: "Mountain View", lat: 37.3861, lng: -122.0839, zoom: 14 },
+  { id: "camp", l: "Campbell",      lat: 37.2872, lng: -121.9500, zoom: 14 }
+];
+
 var map, clusterGroup, userMarker, activeHood = "downtown", activeCat = "all";
 var markerById = {};
+var userLoc = null;
 
 function pinDivIcon(cat) {
   var info = CATS[cat] || { c: "#666", icon: "leaf" };
@@ -41,9 +54,7 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-var userLoc = null;
-
-function popupHtml(p) {
+function flyerHtml(p) {
   var info = CATS[p.cat] || { l: p.cat, c: "#666" };
   var mu = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p.a || p.t);
   var distLine = "";
@@ -69,26 +80,62 @@ function popupHtml(p) {
   return html;
 }
 
+/* The "hanging flyer" info card: a single flyer clothes-pinned to a string
+   near the top of the map, replacing Leaflet's default popup bubble so it
+   behaves identically (and reliably) on desktop and mobile alike. */
+function showFlyer(p) {
+  document.getElementById("flyerContent").innerHTML = flyerHtml(p);
+  document.getElementById("flyerWrap").classList.add("show");
+}
+function hideFlyer() {
+  document.getElementById("flyerWrap").classList.remove("show");
+}
+
 function buildMarkers() {
   clusterGroup = L.markerClusterGroup({ iconCreateFunction: clusterIcon, maxClusterRadius: 50 });
   PLACES.forEach(function (p) {
     var m = L.marker([p.lat, p.lng], { icon: pinDivIcon(p.cat) });
-    m.bindPopup(popupHtml(p), { closeButton: true, autoPanPadding: [20, 20] });
-    m.on("popupopen", function () { m.setPopupContent(popupHtml(p)); });
     m.bpPlace = p;
+    m.on("click", function () { showFlyer(p); });
     markerById[p.id] = m;
-    clusterGroup.addLayer(m);
   });
   map.addLayer(clusterGroup);
 }
 
+/* Rebuilds the visible marker set using MarkerClusterGroup's bulk
+   clearLayers()/addLayers() API. Earlier this looped eachLayer+removeLayer,
+   which Leaflet explicitly documents as unsafe to do mid-iteration — that
+   was corrupting the cluster group's internal spatial index over repeated
+   calls and could leave markers stuck invisible/unclickable. */
 function applyFilters() {
-  clusterGroup.eachLayer(function (m) { clusterGroup.removeLayer(m); });
-  PLACES.forEach(function (p) {
-    var hoodOk = p.hood === activeHood;
-    var catOk = activeCat === "all" || p.cat === activeCat;
-    if (hoodOk && catOk) clusterGroup.addLayer(markerById[p.id]);
-  });
+  var toShow = PLACES.filter(function (p) {
+    return p.hood === activeHood && (activeCat === "all" || p.cat === activeCat);
+  }).map(function (p) { return markerById[p.id]; });
+  clusterGroup.clearLayers();
+  clusterGroup.addLayers(toShow);
+}
+
+/* Cancels any in-flight flyTo before starting a new one. Firing a second
+   flyTo while the first is still animating can leave Leaflet's internal
+   zoom-animation flag stuck on, which in turn stops MarkerClusterGroup
+   from ever swapping its "mid-zoom" placeholder icons back to real,
+   clickable markers — exactly the "pins vanish / clicks do nothing after
+   Locate then Reset" bug. */
+function flyTo(lat, lng, zoom) {
+  map.stop();
+  map.flyTo([lat, lng], zoom, { duration: 1 });
+}
+
+function setAreaLabel(label, hasPlaces) {
+  document.getElementById("mapTitle").textContent = label + " Map";
+  var note = document.getElementById("mapNote");
+  if (hasPlaces) { note.style.display = "none"; }
+  else { note.textContent = "Events coming soon for " + label + ". Be the first to post a flyer!"; note.style.display = "block"; }
+}
+
+function clearAreaSelections() {
+  document.querySelectorAll(".hoodbtn").forEach(function (x) { x.classList.remove("on"); });
+  document.querySelectorAll(".citybtn").forEach(function (x) { x.classList.remove("on"); });
 }
 
 function initHoodRow() {
@@ -98,14 +145,41 @@ function initHoodRow() {
     b.className = "hoodbtn" + (h.id === activeHood ? " on" : "");
     b.textContent = h.l;
     b.onclick = function () {
-      document.querySelectorAll(".hoodbtn").forEach(function (x) { x.classList.remove("on"); });
+      clearAreaSelections();
       b.classList.add("on");
       activeHood = h.id;
-      document.getElementById("mapTitle").textContent = h.l + " Map";
-      map.flyTo([h.lat, h.lng], h.zoom, { duration: 1.1 });
+      setAreaLabel(h.l, true);
+      flyTo(h.lat, h.lng, h.zoom);
       applyFilters();
+      hideFlyer();
     };
     row.appendChild(b);
+  });
+
+  var arrow = document.createElement("button");
+  arrow.className = "hoodarrow";
+  arrow.innerHTML = "&raquo;";
+  arrow.title = "More cities";
+  arrow.onclick = function () {
+    document.getElementById("cityRow").classList.toggle("show");
+  };
+  row.appendChild(arrow);
+
+  var cityRow = document.getElementById("cityRow");
+  CITIES.forEach(function (c) {
+    var b = document.createElement("button");
+    b.className = "citybtn hoodbtn";
+    b.textContent = c.l;
+    b.onclick = function () {
+      clearAreaSelections();
+      b.classList.add("on");
+      activeHood = c.id;
+      setAreaLabel(c.l, false);
+      flyTo(c.lat, c.lng, c.zoom);
+      applyFilters();
+      hideFlyer();
+    };
+    cityRow.appendChild(b);
   });
 }
 
@@ -166,21 +240,19 @@ function initSearch() {
 function selectPlace(p) {
   var hood = HOODS.find(function (h) { return h.id === p.hood; });
   if (hood && activeHood !== p.hood) {
-    document.querySelectorAll(".hoodbtn").forEach(function (x) { x.classList.remove("on"); });
+    clearAreaSelections();
     var idx = HOODS.indexOf(hood);
     document.querySelectorAll(".hoodbtn")[idx].classList.add("on");
     activeHood = p.hood;
-    document.getElementById("mapTitle").textContent = hood.l + " Map";
+    setAreaLabel(hood.l, true);
+    applyFilters();
   }
   document.querySelectorAll(".filtbtn").forEach(function (x) { x.classList.remove("on"); });
   document.querySelector('.filtbtn[data-cat="all"]').classList.add("on");
   activeCat = "all";
   applyFilters();
-  map.flyTo([p.lat, p.lng], 17, { duration: 1 });
-  setTimeout(function () {
-    var m = markerById[p.id];
-    if (m) { clusterGroup.zoomToShowLayer(m, function () { m.openPopup(); }); }
-  }, 300);
+  flyTo(p.lat, p.lng, 17);
+  setTimeout(function () { showFlyer(p); }, 350);
 }
 
 function locateUser() {
@@ -190,8 +262,8 @@ function locateUser() {
     if (userMarker) map.removeLayer(userMarker);
     userMarker = L.circleMarker([userLoc.lat, userLoc.lng], {
       radius: 8, color: "#fff", weight: 2, fillColor: "#2c5f8a", fillOpacity: 1
-    }).addTo(map).bindPopup("You are here");
-    map.flyTo([userLoc.lat, userLoc.lng], 16, { duration: 1 });
+    }).addTo(map);
+    flyTo(userLoc.lat, userLoc.lng, 16);
   }, function () {
     alert("Could not get your location. Check location permissions.");
   }, { enableHighAccuracy: true, timeout: 8000 });
@@ -211,7 +283,9 @@ function initLegend() {
 function initMap() {
   var start = HOODS[0];
   map = L.map("leafletMap", { zoomControl: false, center: [start.lat, start.lng], zoom: start.zoom });
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+  /* Voyager (rather than plain Positron) keeps the same clean light look
+     but renders street names with much more contrast at higher zooms. */
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
     attribution: '&copy; OpenStreetMap &copy; CARTO',
     subdomains: "abcd", maxZoom: 20
   }).addTo(map);
@@ -223,10 +297,12 @@ function initMap() {
   initSearch();
   initLegend();
 
-  document.getElementById("zIn").onclick = function () { map.zoomIn(); };
-  document.getElementById("zOut").onclick = function () { map.zoomOut(); };
-  document.getElementById("zReset").onclick = function () { map.flyTo([start.lat, start.lng], start.zoom, { duration: .8 }); };
+  document.getElementById("zIn").onclick = function () { map.stop(); map.zoomIn(); };
+  document.getElementById("zOut").onclick = function () { map.stop(); map.zoomOut(); };
+  document.getElementById("zReset").onclick = function () { flyTo(start.lat, start.lng, start.zoom); };
   document.getElementById("myLoc").onclick = locateUser;
+  document.getElementById("flyerClose").onclick = hideFlyer;
+  map.on("click", hideFlyer);
 }
 
 document.addEventListener("DOMContentLoaded", initMap);

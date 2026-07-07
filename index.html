@@ -20,6 +20,7 @@
 
   <section id="mapSec">
     <div class="sh"><h2 id="mapTitle">Downtown San Jose Map</h2></div>
+    <div class="mapnote" id="mapNote" style="display:none;"></div>
 
     <div class="mapsearch">
       <div class="msin">
@@ -31,11 +32,22 @@
     </div>
 
     <div class="hoodrow" id="hoodRow"></div>
+    <div class="cityrow" id="cityRow"></div>
     <div class="filtrow" id="filtRow"></div>
 
     <div class="mframe">
       <div class="mvp" id="mvp">
         <div id="leafletMap"></div>
+
+        <div class="mapstring"></div>
+        <div class="mapflyerwrap" id="flyerWrap">
+          <div class="mapclip"></div>
+          <div class="mapflyer">
+            <button class="mfx" id="flyerClose">&times;</button>
+            <div id="flyerContent"></div>
+          </div>
+        </div>
+
         <div class="mlg" id="mapLegend">
           <h4>Map Key</h4>
         </div>
