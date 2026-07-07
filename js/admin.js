@@ -392,11 +392,21 @@ function handleMapClick(e) {
   startNewPin(e.latlng);
 }
 
+/* Every var this page loads from data/places.js at startup gets
+   re-serialized here, not just the ones this tool's own UI edits
+   (CATS/HOODS/PLACES) - otherwise a future addition to that file (like
+   HOODS_SC/CITIES for the multi-city switcher) would silently vanish
+   the next time someone exports, since it'd never have been read back
+   out. If you add a new top-level var to places.js, add its name here
+   too. */
+var PLACES_JS_VARS = ["CATS", "CAT_ORDER", "HOODS", "HOODS_SC", "HOODS_SV", "HOODS_MV", "HOODS_CAMP", "CITIES"];
+
 function generateFileContents() {
   var out = "";
-  out += "var CATS = " + JSON.stringify(CATS, null, 2) + ";\n\n";
-  out += "var CAT_ORDER = " + JSON.stringify(CAT_ORDER) + ";\n\n";
-  out += "var HOODS = " + JSON.stringify(HOODS, null, 2) + ";\n\n";
+  PLACES_JS_VARS.forEach(function (name) {
+    if (typeof window[name] === "undefined") return;
+    out += "var " + name + " = " + JSON.stringify(window[name], null, 2) + ";\n\n";
+  });
   out += "var PLACES = " + JSON.stringify(workingPlaces, null, 2) + ";\n";
   return out;
 }
