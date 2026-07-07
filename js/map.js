@@ -252,6 +252,27 @@ function setActiveFilter(btn, cat) {
   btn.classList.add("on");
   activeCat = cat;
   applyFilters();
+  if (cat !== "all") flyToNearest(cat);
+}
+
+/* Tapping a category filter used to just hide every other pin and leave
+   you wherever you happened to be looking - if that spot wasn't near a
+   match, you'd end up staring at empty street with no sense of which way
+   to go. Now it re-centers on the closest matching pin (closest to your
+   real location if My Location is on, otherwise closest to whatever the
+   map is currently showing), so pressing "Transit" or "Restrooms" always
+   drops you next to one instead of just filtering blind. */
+function flyToNearest(cat) {
+  var anchor = userLoc || map.getCenter();
+  var candidates = PLACES.filter(function (p) { return p.hood === activeHood && p.cat === cat; });
+  if (!candidates.length) return;
+  var nearest = null, nearestDist = Infinity;
+  candidates.forEach(function (p) {
+    var d = haversine(anchor.lat, anchor.lng, p.lat, p.lng);
+    if (d < nearestDist) { nearestDist = d; nearest = p; }
+  });
+  flyTo(nearest.lat, nearest.lng, Math.max(map.getZoom(), 17));
+  setTimeout(function () { showFlyer(nearest); }, 350);
 }
 
 function initSearch() {

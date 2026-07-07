@@ -41,8 +41,8 @@ var PLACES = [
   {
     id: "fm", cat: "market", hood: "downtown",
     t: "Downtown SJ Farmers Market", w: "Wednesdays 9:00am - 1:30pm", d: "wed",
-    a: "101 Paseo de San Antonio, San Jose, CA 95113",
-    lat: 37.3349, lng: -121.8857,
+    a: "Paseo de San Antonio (near 2nd St), San Jose, CA 95113",
+    lat: 37.3356, lng: -121.8843,
     ds: "Over 20 local farms and vendors every Wednesday on Paseo de San Antonio.",
     pk: "ParkSJ garage 90 min free. Entrances on 2nd and 3rd Street.",
     tr: "VTA Light Rail Convention Center stop, 5 min walk.",
@@ -127,8 +127,8 @@ var PLACES = [
 
   /* Restrooms */
   { id: "rr1", cat: "restrooms", hood: "downtown", t: "Plaza de Cesar Chavez Restrooms", a: "Plaza de Cesar Chavez, San Jose, CA", lat: 37.3325, lng: -121.8900, ds: "Public restrooms in the park." },
-  { id: "rr2", cat: "restrooms", hood: "downtown", t: "San Pedro Square Market Restrooms", a: "87 N San Pedro St, San Jose, CA", lat: 37.3366, lng: -121.8944, ds: "Restrooms inside the market." },
-  { id: "rr3", cat: "restrooms", hood: "downtown", t: "SoFA Market Restrooms", a: "387 S 1st St, San Jose, CA", lat: 37.3303, lng: -121.8865, ds: "Restrooms inside the food hall." },
+  { id: "rr2", cat: "restrooms", hood: "downtown", t: "San Pedro Square Market Restrooms", a: "87 N San Pedro St, San Jose, CA", lat: 37.3369, lng: -121.8949, ds: "Restrooms inside the market." },
+  { id: "rr3", cat: "restrooms", hood: "downtown", t: "SoFA Market Restrooms", a: "387 S 1st St, San Jose, CA", lat: 37.3298, lng: -121.8859, ds: "Restrooms inside the food hall." },
   { id: "rr4", cat: "restrooms", hood: "downtown", t: "Convention Center Public Restrooms", a: "150 W San Carlos St, San Jose, CA", lat: 37.3304, lng: -121.8892, ds: "Public restrooms at the Convention Center." },
   { id: "rr5", cat: "restrooms", hood: "downtown", t: "MLK Library Restrooms", a: "150 E San Fernando St, San Jose, CA", lat: 37.3355, lng: -121.8850, ds: "Restrooms inside the Dr. Martin Luther King Jr. Library." },
 
