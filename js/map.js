@@ -4,18 +4,19 @@
 var ICONS = {
   leaf: "\u{1F343}", fork: "\u{1F374}", cup: "\u{1F378}", palette: "\u{1F3A8}",
   art: "\u{1F5BC}", mask: "\u{1F3AD}", star: "⭐", bag: "\u{1F6CD}",
-  P: "P", restroom: "\u{1F6BB}", train: "\u{1F686}"
+  P: "P", restroom: "\u{1F6BB}", train: "\u{1F686}",
+  school: "\u{1F3EB}", hospital: "\u{1F3E5}", church: "⛪"
 };
 
-/* Cities beyond San Jose, revealed via the ">>" arrow at the end of the
-   neighborhood row. We don't have place data for these yet, so selecting
-   one just flies the map to its downtown/main area (mirrors Baypinned3's
+/* Cities beyond San Jose, revealed via the "Other Cities" button next to
+   the map title. We don't have place data for these yet, so selecting one
+   just flies the map to its downtown/main area (mirrors Baypinned3's
    existing top-level city switcher, which shows a "coming soon" state for
    every city besides San Jose). */
 var CITIES = [
   { id: "sc",   l: "Santa Clara",   lat: 37.3541, lng: -121.9552, zoom: 14 },
   { id: "sv",   l: "Sunnyvale",     lat: 37.3688, lng: -122.0363, zoom: 14 },
-  { id: "mv",   l: "Mountain View", lat: 37.3861, lng: -122.0839, zoom: 14 },
+  { id: "mv",   l: "Mountain View", lat: 37.3894, lng: -122.0832, zoom: 14 },
   { id: "camp", l: "Campbell",      lat: 37.2872, lng: -121.9500, zoom: 14 }
 ];
 
@@ -23,17 +24,44 @@ var map, clusterGroup, userMarker, activeHood = "downtown", activeCat = "all";
 var markerById = {};
 var userLoc = null;
 
-function pinDivIcon(cat) {
-  var info = CATS[cat] || { c: "#666", icon: "leaf" };
+/* A place is "live" only while its schedule says it's actually happening
+   right now (mirrors Baypinned3's isToday/expire logic) - so a Wednesday
+   farmers market only glows live on Wednesdays, not every day. Places with
+   no `d` schedule (theaters, parking, transit, schools...) are standing
+   locations rather than scheduled events, so they never show as live. */
+function isTodayPlace(p) {
+  if (!p.d) return false;
+  var d = new Date(), dn = ["sun","mon","tue","wed","thu","fri","sat"][d.getDay()];
+  if (p.d === "daily" || p.d === "today") return true;
+  if (p.d === dn) return true;
+  if (p.d === "monthly") {
+    if (d.getDay() !== 5) return false;
+    var f = new Date(d.getFullYear(), d.getMonth(), 1);
+    while (f.getDay() !== 5) f.setDate(f.getDate() + 1);
+    return d.getDate() === f.getDate();
+  }
+  if (p.d.length === 10) return p.d === d.toISOString().slice(0, 10);
+  return false;
+}
+function isLive(p) {
+  if (p.ed && p.ed < new Date().toISOString().slice(0, 10)) return false;
+  return isTodayPlace(p);
+}
+
+function pinDivIcon(p) {
+  var info = CATS[p.cat] || { c: "#666", icon: "leaf" };
   var glyph = ICONS[info.icon] || "\u{1F4CD}";
+  var live = isLive(p);
   var html =
-    '<div class="bp-pin">' +
+    '<div class="bp-pin' + (live ? ' bp-live' : '') + '">' +
+    (live ? '<div class="bp-livering"></div>' : '') +
     '<svg width="34" height="44" viewBox="0 0 34 44">' +
     '<path d="M17 0C7.6 0 0 7.6 0 17c0 12.7 17 27 17 27s17-14.3 17-27C34 7.6 26.4 0 17 0z" ' +
     'fill="' + info.c + '" stroke="#fff" stroke-width="2"/>' +
     '<circle cx="17" cy="17" r="11" fill="rgba(255,255,255,.92)"/>' +
     '</svg>' +
-    '<div style="position:absolute;top:5px;left:0;right:0;text-align:center;font-size:14px;line-height:1;">' + glyph + '</div>' +
+    '<div class="bp-glyph">' + glyph + '</div>' +
+    (live ? '<div class="bp-livedot"></div>' : '') +
     '</div>';
   return L.divIcon({ html: html, className: "", iconSize: [34, 44], iconAnchor: [17, 44], popupAnchor: [0, -40] });
 }
@@ -64,6 +92,7 @@ function flyerHtml(p) {
   }
   var html = '<div class="bp-card">';
   html += '<span class="bp-cat" style="background:' + info.c + '">' + info.l + '</span>';
+  if (isLive(p)) html += ' <span class="bp-livebadge">LIVE NOW</span>';
   html += '<h3>' + p.t + '</h3>';
   if (p.ds) html += '<div class="bp-desc">' + p.ds + '</div>';
   html += '<div class="bp-meta">';
@@ -92,9 +121,14 @@ function hideFlyer() {
 }
 
 function buildMarkers() {
-  clusterGroup = L.markerClusterGroup({ iconCreateFunction: clusterIcon, maxClusterRadius: 50 });
+  /* disableClusteringAtZoom guarantees every pin becomes individually
+     visible and clickable once zoomed in far enough, even when two pins
+     sit almost on top of each other (e.g. an event pin and that same
+     venue's restroom pin) - without it they'd stay clustered together
+     at any zoom, since they're only meters apart. */
+  clusterGroup = L.markerClusterGroup({ iconCreateFunction: clusterIcon, maxClusterRadius: 50, disableClusteringAtZoom: 18 });
   PLACES.forEach(function (p) {
-    var m = L.marker([p.lat, p.lng], { icon: pinDivIcon(p.cat) });
+    var m = L.marker([p.lat, p.lng], { icon: pinDivIcon(p) });
     m.bpPlace = p;
     m.on("click", function () { showFlyer(p); });
     markerById[p.id] = m;
@@ -156,14 +190,9 @@ function initHoodRow() {
     row.appendChild(b);
   });
 
-  var arrow = document.createElement("button");
-  arrow.className = "hoodarrow";
-  arrow.innerHTML = "&raquo;";
-  arrow.title = "More cities";
-  arrow.onclick = function () {
+  document.getElementById("otherCityBtn").onclick = function () {
     document.getElementById("cityRow").classList.toggle("show");
   };
-  row.appendChild(arrow);
 
   var cityRow = document.getElementById("cityRow");
   CITIES.forEach(function (c) {
@@ -251,7 +280,7 @@ function selectPlace(p) {
   document.querySelector('.filtbtn[data-cat="all"]').classList.add("on");
   activeCat = "all";
   applyFilters();
-  flyTo(p.lat, p.lng, 17);
+  flyTo(p.lat, p.lng, 18);
   setTimeout(function () { showFlyer(p); }, 350);
 }
 
@@ -278,6 +307,10 @@ function initLegend() {
     row.innerHTML = '<div class="ld" style="background:' + info.c + '"></div>' + info.l;
     lg.appendChild(row);
   });
+  var liveRow = document.createElement("div");
+  liveRow.className = "li";
+  liveRow.innerHTML = '<div class="ld" style="background:#10b981"></div>Live Now';
+  lg.appendChild(liveRow);
 }
 
 function initMap() {

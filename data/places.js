@@ -1,6 +1,12 @@
 /* Place + pin data for the BayPinned / Pinned SJ interactive map.
    Coordinates are real-world lat/lng (WGS84) for San Jose, CA — this
-   replaces the old hand-drawn SVG's fictional 0-1100/0-720 mx/my grid. */
+   replaces the old hand-drawn SVG's fictional 0-1100/0-720 mx/my grid.
+   Coordinates for named downtown landmarks (Plaza de Cesar Chavez,
+   Diridon Station, San Pedro Square Market, SoFA Market, MLK Library,
+   Circle of Palms) were cross-checked against public map listings.
+   Neighborhood sample pins (Japantown/Santana Row/Willow Glen/Alum
+   Rock/East San Jose) are placeholder locations for that area, not
+   confirmed single-business addresses — swap in real data before launch. */
 
 var CATS = {
   market:    { l: "Markets",         c: "#3d6b42", icon: "leaf" },
@@ -13,11 +19,14 @@ var CATS = {
   shop:      { l: "Shops",           c: "#c0392b", icon: "bag" },
   parking:   { l: "Parking",         c: "#2c5f8a", icon: "P" },
   restrooms: { l: "Restrooms",       c: "#64748b", icon: "restroom" },
-  transit:   { l: "Transit",         c: "#1f8a4c", icon: "train" }
+  transit:   { l: "Transit",         c: "#1f8a4c", icon: "train" },
+  schools:   { l: "Schools",         c: "#0ea5e9", icon: "school" },
+  hospitals: { l: "Hospitals",       c: "#dc2626", icon: "hospital" },
+  churches:  { l: "Churches",        c: "#7c3aed", icon: "church" }
 };
 
 /* Order controls the category filter row. */
-var CAT_ORDER = ["market","foodhall","bars","artwalk","cityart","venue","holiday","shop","parking","restrooms","transit"];
+var CAT_ORDER = ["market","foodhall","bars","artwalk","cityart","venue","holiday","shop","parking","restrooms","transit","schools","hospitals","churches"];
 
 var HOODS = [
   { id: "downtown",  l: "Downtown San Jose",       lat: 37.3382, lng: -121.8863, zoom: 15 },
@@ -31,9 +40,9 @@ var HOODS = [
 var PLACES = [
   {
     id: "fm", cat: "market", hood: "downtown",
-    t: "Downtown SJ Farmers Market", w: "Wednesdays 9:00am - 1:30pm",
+    t: "Downtown SJ Farmers Market", w: "Wednesdays 9:00am - 1:30pm", d: "wed",
     a: "101 Paseo de San Antonio, San Jose, CA 95113",
-    lat: 37.3346, lng: -121.8859,
+    lat: 37.3349, lng: -121.8857,
     ds: "Over 20 local farms and vendors every Wednesday on Paseo de San Antonio.",
     pk: "ParkSJ garage 90 min free. Entrances on 2nd and 3rd Street.",
     tr: "VTA Light Rail Convention Center stop, 5 min walk.",
@@ -41,9 +50,9 @@ var PLACES = [
   },
   {
     id: "sm", cat: "foodhall", hood: "downtown",
-    t: "SoFA Market", w: "Open Daily 11am - 9pm",
+    t: "SoFA Market", w: "Open Daily 11am - 9pm", d: "daily",
     a: "387 S 1st St, San Jose, CA 95113",
-    lat: 37.3300, lng: -121.8877,
+    lat: 37.3302, lng: -121.8864,
     ds: "A permanent downtown food hall with multiple restaurants and a craft cocktail bar.",
     pk: "Street parking on 1st and 2nd. ParkSJ on 2nd Street.",
     tr: "VTA Route 65/68 on 1st Street.",
@@ -51,9 +60,9 @@ var PLACES = [
   },
   {
     id: "wc", cat: "holiday", hood: "downtown",
-    t: "Soccer Celebration - World Cup Watch Party", w: "June 11 - July 19, all matches live",
+    t: "Soccer Celebration - World Cup Watch Party", w: "June 11 - July 19, all matches live", d: "today", ed: "2026-07-19",
     a: "San Pedro Square Market, 87 N San Pedro St, San Jose, CA 95110",
-    lat: 37.3385, lng: -121.8927,
+    lat: 37.3365, lng: -121.8943,
     ds: "Bay Area's largest free World Cup watch party on multiple jumbo screens.",
     pk: "San Pedro Street garage nearby.",
     tr: "VTA Route 522 on Santa Clara St.",
@@ -61,9 +70,9 @@ var PLACES = [
   },
   {
     id: "aw", cat: "artwalk", hood: "downtown",
-    t: "South First Fridays ArtWalk", w: "First Friday Monthly, 5pm - 9pm",
+    t: "South First Fridays ArtWalk", w: "First Friday Monthly, 5pm - 9pm", d: "monthly",
     a: "South 1st Street, SoFA District, San Jose, CA",
-    lat: 37.3305, lng: -121.8879,
+    lat: 37.3305, lng: -121.8867,
     ds: "Free self-guided evening art walk through downtown galleries, museums, and pop-up installations.",
     pk: "Street parking on S 1st/2nd/3rd. Free after 6pm in many garages.",
     tr: "VTA Route 65/68. Walk south from Convention Center light rail.",
@@ -73,7 +82,7 @@ var PLACES = [
     id: "gs", cat: "cityart", hood: "downtown",
     t: "Gaiascope at Circle of Palms", w: "May 22 - Aug 18, always open",
     a: "Circle of Palms Plaza, 127 S Market St, San Jose, CA 95113",
-    lat: 37.3355, lng: -121.8896,
+    lat: 37.3334, lng: -121.8896,
     ds: "Three suspended kaleidoscope sculptures by artist Brooke Einbender.",
     pk: "Market Street garage one block north.",
     tr: "VTA Convention Center stop, 2 min walk.",
@@ -113,20 +122,25 @@ var PLACES = [
   /* Parking */
   { id: "pk1", cat: "parking", hood: "downtown", t: "ParkSJ 2nd Street Garage", a: "2nd St, San Jose, CA", lat: 37.3361, lng: -121.8856, ds: "City parking garage, 2nd Street entrance." },
   { id: "pk2", cat: "parking", hood: "downtown", t: "ParkSJ 3rd Street Garage", a: "3rd St, San Jose, CA", lat: 37.3361, lng: -121.8834, ds: "City parking garage, 3rd Street entrance." },
-  { id: "pk3", cat: "parking", hood: "downtown", t: "San Pedro Square Garage", a: "San Pedro St, San Jose, CA", lat: 37.3414, lng: -121.8917, ds: "Garage adjacent to San Pedro Square Market." },
+  { id: "pk3", cat: "parking", hood: "downtown", t: "San Pedro Square Garage", a: "San Pedro St, San Jose, CA", lat: 37.3374, lng: -121.8936, ds: "Garage adjacent to San Pedro Square Market." },
   { id: "pk4", cat: "parking", hood: "downtown", t: "Convention Center Parking", a: "Convention Center, San Jose, CA", lat: 37.3305, lng: -121.8888, ds: "Parking at the San Jose Convention Center." },
 
   /* Restrooms */
-  { id: "rr1", cat: "restrooms", hood: "downtown", t: "Plaza de Cesar Chavez Restrooms", a: "Plaza de Cesar Chavez, San Jose, CA", lat: 37.3327, lng: -121.8895, ds: "Public restrooms in the park." },
-  { id: "rr2", cat: "restrooms", hood: "downtown", t: "San Pedro Square Market Restrooms", a: "87 N San Pedro St, San Jose, CA", lat: 37.3384, lng: -121.8925, ds: "Restrooms inside the market." },
-  { id: "rr3", cat: "restrooms", hood: "downtown", t: "SoFA Market Restrooms", a: "387 S 1st St, San Jose, CA", lat: 37.3299, lng: -121.8876, ds: "Restrooms inside the food hall." },
+  { id: "rr1", cat: "restrooms", hood: "downtown", t: "Plaza de Cesar Chavez Restrooms", a: "Plaza de Cesar Chavez, San Jose, CA", lat: 37.3325, lng: -121.8900, ds: "Public restrooms in the park." },
+  { id: "rr2", cat: "restrooms", hood: "downtown", t: "San Pedro Square Market Restrooms", a: "87 N San Pedro St, San Jose, CA", lat: 37.3366, lng: -121.8944, ds: "Restrooms inside the market." },
+  { id: "rr3", cat: "restrooms", hood: "downtown", t: "SoFA Market Restrooms", a: "387 S 1st St, San Jose, CA", lat: 37.3303, lng: -121.8865, ds: "Restrooms inside the food hall." },
   { id: "rr4", cat: "restrooms", hood: "downtown", t: "Convention Center Public Restrooms", a: "150 W San Carlos St, San Jose, CA", lat: 37.3304, lng: -121.8892, ds: "Public restrooms at the Convention Center." },
-  { id: "rr5", cat: "restrooms", hood: "downtown", t: "MLK Library Restrooms", a: "150 E San Fernando St, San Jose, CA", lat: 37.3355, lng: -121.8825, ds: "Restrooms inside the Dr. Martin Luther King Jr. Library." },
+  { id: "rr5", cat: "restrooms", hood: "downtown", t: "MLK Library Restrooms", a: "150 E San Fernando St, San Jose, CA", lat: 37.3355, lng: -121.8850, ds: "Restrooms inside the Dr. Martin Luther King Jr. Library." },
 
   /* Transit */
-  { id: "tr1", cat: "transit", hood: "downtown", t: "Diridon Station", a: "65 Cahill St, San Jose, CA", lat: 37.3297, lng: -121.9021, ds: "Caltrain, ACE, Amtrak and future BART/HSR hub." },
+  { id: "tr1", cat: "transit", hood: "downtown", t: "Diridon Station", a: "65 Cahill St, San Jose, CA", lat: 37.3306, lng: -121.9023, ds: "Caltrain, ACE, Amtrak and future BART/HSR hub." },
   { id: "tr2", cat: "transit", hood: "downtown", t: "Convention Center VTA Stop", a: "1st St, San Jose, CA", lat: 37.3300, lng: -121.8891, ds: "VTA Light Rail stop near the Convention Center." },
   { id: "tr3", cat: "transit", hood: "downtown", t: "St James VTA Stop", a: "N 1st St, San Jose, CA", lat: 37.3418, lng: -121.8905, ds: "VTA Light Rail stop near St James Park." },
+
+  /* Schools / Hospitals / Churches - often host city-sponsored events */
+  { id: "sc1", cat: "schools", hood: "downtown", t: "San Jose State University", a: "1 Washington Sq, San Jose, CA 95192", lat: 37.3352, lng: -121.8811, ds: "Public university anchoring the east edge of downtown; frequent public events and lectures." },
+  { id: "ch1", cat: "churches", hood: "downtown", t: "Cathedral Basilica of St. Joseph", a: "80 S Market St, San Jose, CA 95113", lat: 37.3358, lng: -121.8912, ds: "Historic Catholic cathedral in the heart of downtown; hosts community and holiday services." },
+  { id: "ho1", cat: "hospitals", hood: "east", t: "Regional Medical Center of San Jose", a: "225 N Jackson Ave, San Jose, CA 95116", lat: 37.3559, lng: -121.8656, ds: "Full-service hospital serving east San Jose." },
 
   /* Japantown sample pins */
   { id: "jt1", cat: "foodhall", hood: "japantown", t: "Japantown Food Row", a: "Jackson St, San Jose, CA", lat: 37.3494, lng: -121.8925, ds: "Historic strip of Japanese restaurants and cafes." },
