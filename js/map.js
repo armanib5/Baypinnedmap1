@@ -5,7 +5,7 @@ var ICONS = {
   leaf: "\u{1F343}", fork: "\u{1F374}", cup: "\u{1F378}", palette: "\u{1F3A8}",
   art: "\u{1F5BC}", mask: "\u{1F3AD}", star: "⭐", bag: "\u{1F6CD}",
   P: "P", restroom: "\u{1F6BB}", train: "\u{1F686}",
-  school: "\u{1F3EB}", hospital: "\u{1F3E5}", church: "⛪", plate: "\u{1F37D}\u{FE0F}"
+  school: "\u{1F3EB}", hospital: "\u{1F3E5}", church: "⛪", plate: "\u{1F37D}\u{FE0F}", hotel: "\u{1F3E8}"
 };
 
 /* Cities beyond San Jose, revealed via the "Other Cities" button next to
@@ -114,7 +114,7 @@ function flyerHtml(p) {
   html += '</div>';
   html += '<div class="bp-btnrow">';
   html += '<a class="bp-btn blue" href="' + mu + '" target="_blank" rel="noopener">Directions</a>';
-  html += '<button class="bp-btn gold" onclick="alert(\'Full details coming soon.\')">Full Details</button>';
+  html += '<button class="bp-btn gold" onclick="showFullDetail(\'' + p.id + '\')">Full Details</button>';
   if (p.wb) html += '<a class="bp-btn purple" href="' + p.wb + '" target="_blank" rel="noopener">Website</a>';
   html += '</div></div>';
   return html;
@@ -129,6 +129,41 @@ function showFlyer(p) {
 }
 function hideFlyer() {
   document.getElementById("flyerWrap").classList.remove("show");
+}
+
+/* Full-screen detail view - everything the flyer card has, laid out with
+   more room, reached via the flyer's "Full Details" button. This is the
+   whole record for a pin until the board (with photos, tags, vendor
+   groups etc.) exists to plug richer data in. */
+function showFullDetail(id) {
+  var p = PLACES.find(function (x) { return x.id === id; });
+  if (!p) return;
+  var info = CATS[p.cat] || { l: p.cat, c: "#666" };
+  var mu = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p.a || p.t);
+  function box(label, val) { return val ? '<div class="dibox"><h4>' + label + '</h4><p>' + val + '</p></div>' : ""; }
+  var html = '<button class="xbtn" id="detailClose">&times;</button>';
+  html += '<span class="dcat" style="background:' + info.c + '">' + info.l + '</span>';
+  if (isLive(p)) html += ' <span class="bp-livebadge">LIVE NOW</span>';
+  html += '<h2>' + p.t + '</h2>';
+  if (p.w) html += '<div class="dwhen">' + p.w + '</div>';
+  if (p.ds) html += '<p class="ddesc">' + p.ds + '</p>';
+  html += '<div class="digrid">';
+  html += box("Address", p.a);
+  html += box("Parking", p.pk);
+  html += box("Transit", p.tr);
+  if (userLoc) html += box("Distance", haversine(userLoc.lat, userLoc.lng, p.lat, p.lng).toFixed(1) + " mi from you");
+  if (p.ed) html += box("Ends", p.ed);
+  html += '</div>';
+  html += '<div class="dbtnrow">';
+  html += '<a class="bp-btn blue" href="' + mu + '" target="_blank" rel="noopener">Directions</a>';
+  if (p.wb) html += '<a class="bp-btn purple" href="' + p.wb + '" target="_blank" rel="noopener">Website</a>';
+  html += '</div>';
+  document.getElementById("detailPanel").innerHTML = html;
+  document.getElementById("detailOv").classList.add("on");
+  document.getElementById("detailClose").onclick = hideFullDetail;
+}
+function hideFullDetail() {
+  document.getElementById("detailOv").classList.remove("on");
 }
 
 function buildMarkers() {

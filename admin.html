@@ -20,7 +20,8 @@
 
   <div class="adminwrap">
     <div class="adminhint">
-      <b>Click empty map</b> to drop a new pin here &middot; <b>drag any pin</b> to reposition it &middot; <b>click an existing pin</b> to edit it &middot;
+      <b>Tap "+ Add New Pin"</b> below for the easiest way to drop a pin (then drag it to the exact spot) &middot;
+      or <b>tap empty map</b> to drop one there directly &middot; <b>drag any pin</b> to reposition it &middot; <b>tap an existing pin</b> to edit it &middot;
       use <b>Draw Zone</b> below to mark an event's street-closure footprint. Nothing here saves to the live site automatically &mdash;
       when you're done, use <b>Export</b> at the bottom to copy the updated data and paste it into <code>data/places.js</code> yourself.
     </div>
@@ -31,6 +32,10 @@
 
   <div class="panel" id="panel">
     <div class="panel-inner">
+      <div class="btnrow" style="margin-top:0;margin-bottom:12px;">
+        <button class="abtn gold" id="btnAddHere">+ Add New Pin</button>
+      </div>
+      <div class="savestatus" id="saveStatus">Autosave status will appear here.</div>
       <h3 id="panelTitle">No pin selected</h3>
       <div class="modehint" id="modeHint"></div>
 
@@ -116,7 +121,7 @@
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
-<script src="data/places.js?v=5"></script>
-<script src="js/admin.js?v=5"></script>
+<script src="data/places.js?v=6"></script>
+<script src="js/admin.js?v=6"></script>
 </body>
 </html>

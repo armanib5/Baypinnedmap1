@@ -23,11 +23,12 @@ var CATS = {
   transit:   { l: "Transit",         c: "#1f8a4c", icon: "train" },
   schools:   { l: "Schools",         c: "#0ea5e9", icon: "school" },
   hospitals: { l: "Hospitals",       c: "#dc2626", icon: "hospital" },
-  churches:  { l: "Churches",        c: "#7c3aed", icon: "church" }
+  churches:  { l: "Churches",        c: "#7c3aed", icon: "church" },
+  hotels:    { l: "Hotels",          c: "#0f766e", icon: "hotel" }
 };
 
 /* Order controls the category filter row. */
-var CAT_ORDER = ["market","foodhall","restaurants","bars","artwalk","cityart","venue","holiday","shop","parking","restrooms","transit","schools","hospitals","churches"];
+var CAT_ORDER = ["market","foodhall","restaurants","bars","artwalk","cityart","venue","holiday","shop","parking","restrooms","transit","schools","hospitals","churches","hotels"];
 
 var HOODS = [
   { id: "downtown",  l: "Downtown San Jose",       lat: 37.3382, lng: -121.8863, zoom: 15 },
@@ -163,6 +164,7 @@ var PLACES = [
   { id: "sc1", cat: "schools", hood: "downtown", t: "San Jose State University", a: "1 Washington Sq, San Jose, CA 95192", lat: 37.3352, lng: -121.8811, ds: "Public university anchoring the east edge of downtown; frequent public events and lectures." },
   { id: "ch1", cat: "churches", hood: "downtown", t: "Cathedral Basilica of St. Joseph", a: "80 S Market St, San Jose, CA 95113", lat: 37.3358, lng: -121.8912, ds: "Historic Catholic cathedral in the heart of downtown; hosts community and holiday services." },
   { id: "ho1", cat: "hospitals", hood: "east", t: "Regional Medical Center of San Jose", a: "225 N Jackson Ave, San Jose, CA 95116", lat: 37.3559, lng: -121.8656, ds: "Full-service hospital serving east San Jose." },
+  { id: "htl1", cat: "hotels", hood: "downtown", t: "Signia by Hilton San Jose", a: "170 S Market St, San Jose, CA 95113", lat: 37.3325, lng: -121.8894, ds: "Downtown's largest hotel, next to Circle of Palms Plaza. Formerly the Fairmont San Jose - coordinates approximate, not geocode-verified.", wb: "https://www.hilton.com/en/hotels/sjcshsh-signia-san-jose/" },
 
   /* Japantown sample pins */
   { id: "jt1", cat: "foodhall", hood: "japantown", t: "Japantown Food Row", a: "Jackson St, San Jose, CA", lat: 37.3494, lng: -121.8925, ds: "Historic strip of Japanese restaurants and cafes." },

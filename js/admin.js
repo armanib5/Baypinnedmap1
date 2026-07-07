@@ -13,16 +13,34 @@ var zoneMode = null;   // null | "corner1" | "corner2"
 var zoneTargetId = null;
 var zoneCorner1 = null;
 var touched = {}; // id -> "added" | "edited" | "deleted" (for the pending list)
+var tempMarker = null; // draggable placeholder shown while creating a new pin, before Save
+
+var storageBroken = false;
 
 function loadDraft() {
   try {
     var raw = localStorage.getItem(DRAFT_KEY);
     if (raw) return JSON.parse(raw);
-  } catch (e) {}
+  } catch (e) { storageBroken = true; }
   return JSON.parse(JSON.stringify(PLACES));
 }
+
+/* Autosave silently failed before if localStorage.setItem threw - which it
+   does on iOS Safari Private Browsing even for tiny strings, with zero
+   visible error. Now every save updates an on-screen status line so you
+   can actually see whether it worked instead of trusting it blindly. */
 function saveDraft() {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(workingPlaces)); } catch (e) {}
+  var el = document.getElementById("saveStatus");
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(workingPlaces));
+    storageBroken = false;
+    if (el) { el.textContent = "Autosaved to this browser at " + new Date().toLocaleTimeString(); el.className = "savestatus ok"; }
+    return true;
+  } catch (e) {
+    storageBroken = true;
+    if (el) { el.textContent = "Autosave is NOT working in this browser (private/incognito mode blocks it) - export or download before you close this tab, or your edits will be lost!"; el.className = "savestatus bad"; }
+    return false;
+  }
 }
 
 function catIcon(cat) {
@@ -102,6 +120,7 @@ function clearForm() {
 function selectPlace(id) {
   selectedId = id;
   zoneMode = null; zoneTargetId = null; zoneCorner1 = null;
+  clearTempMarker();
   document.getElementById("modeHint").textContent = "";
   var p = workingPlaces.find(function (x) { return x.id === id; });
   if (!p) return;
@@ -124,15 +143,38 @@ function selectPlace(id) {
   document.getElementById("btnDelete").disabled = false;
 }
 
+function tempIcon() {
+  var html = '<div style="width:30px;height:30px;border-radius:50%;background:rgba(184,134,11,.85);' +
+    'border:3px dashed #fff;box-shadow:0 2px 8px rgba(0,0,0,.6);"></div>';
+  return L.divIcon({ html: html, className: "", iconSize: [30, 30], iconAnchor: [15, 15] });
+}
+
+/* Starts a new pin at latlng AND drops a draggable placeholder marker
+   there immediately, so you can drag it to the exact spot before ever
+   touching the form - much easier on mobile than needing to click the
+   precise right pixel among 40+ existing pins. */
 function startNewPin(latlng) {
   selectedId = null;
   zoneMode = null; zoneTargetId = null; zoneCorner1 = null;
-  document.getElementById("modeHint").textContent = "";
+  document.getElementById("modeHint").textContent = "Drag the gold dashed pin to the exact spot, then fill in the form and Save.";
   document.getElementById("panelTitle").textContent = "New pin (unsaved) - fill in the form and click Save Pin";
   clearForm();
   document.getElementById("fLat").value = round4(latlng.lat);
   document.getElementById("fLng").value = round4(latlng.lng);
   document.getElementById("btnDelete").disabled = true;
+
+  if (tempMarker) map.removeLayer(tempMarker);
+  tempMarker = L.marker(latlng, { icon: tempIcon(), draggable: true });
+  tempMarker.on("dragend", function () {
+    var ll = tempMarker.getLatLng();
+    document.getElementById("fLat").value = round4(ll.lat);
+    document.getElementById("fLng").value = round4(ll.lng);
+  });
+  tempMarker.addTo(map);
+}
+
+function clearTempMarker() {
+  if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
 }
 
 function readForm() {
@@ -178,10 +220,12 @@ function savePin() {
     var np = Object.assign({ id: id }, data);
     workingPlaces.push(np);
     buildMarker(np);
+    clearTempMarker();
     selectedId = id;
     document.getElementById("btnDelete").disabled = false;
     touch(id, "added");
   }
+  document.getElementById("modeHint").textContent = "";
   document.getElementById("panelTitle").textContent = "Editing: " + data.t;
   saveDraft();
 }
@@ -304,15 +348,18 @@ function initAdmin() {
   document.getElementById("btnZoneClear").onclick = clearZone;
   document.getElementById("btnCancel").onclick = function () {
     selectedId = null; zoneMode = null; zoneTargetId = null; zoneCorner1 = null;
+    clearTempMarker();
     document.getElementById("panelTitle").textContent = "No pin selected";
     document.getElementById("modeHint").textContent = "";
     clearForm();
     document.getElementById("btnDelete").disabled = true;
   };
+  document.getElementById("btnAddHere").onclick = function () { startNewPin(map.getCenter()); };
   document.getElementById("btnExport").onclick = exportData;
   document.getElementById("btnDownload").onclick = downloadData;
   document.getElementById("btnResetDraft").onclick = resetDraft;
   document.getElementById("btnDelete").disabled = true;
+  saveDraft(); // populate the save-status line immediately so you know up front if autosave works here
 }
 
 document.addEventListener("DOMContentLoaded", initAdmin);
